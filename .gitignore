@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# Build
+dist/
+build/
+.next/
+out/
+
+# Env - keep .env.example
+.env
+.env.*
+!.env.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Coverage
+coverage/
+
+# IDE / OS
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Temp
+tmp/
+temp/
+
+.kilo/
+.freebuff/
+
+frontend/
+ToDo.md
