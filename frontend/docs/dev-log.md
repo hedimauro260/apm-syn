@@ -322,3 +322,1024 @@ npm run build      → ✅ sucesso
 [ x ] npm run lint
 [ x ] npm run build
 ```
+
+---
+
+## 2026-08-25 — Fase 1.1: Design Tokens no Código
+
+**Fase:** 1 — Design System e Layout Base
+
+**Descrição:** Implementação completa dos design tokens: cores semânticas (Dark/Light/System), tipografia, spacing, radius, shadows e tabular-nums para valores financeiros.
+
+**Arquivos modificados:**
+
+```text
+frontend/src/index.css                   (tokens de tema integrados)
+frontend/src/pages/home-page.tsx         (usando tokens + theme toggle)
+frontend/src/pages/app-page.tsx          (usando tokens)
+frontend/src/pages/not-found-page.tsx    (usando tokens)
+frontend/src/layouts/app-layout.tsx      (usando tokens)
+```
+
+**Tokens de cor implementados:**
+
+```text
+Background
+├── background
+├── surface
+└── surface-elevated
+
+Foreground
+├── foreground
+├── foreground-secondary
+└── foreground-muted
+
+Border
+├── border
+└── border-subtle
+
+Brand
+├── primary
+├── primary-hover
+└── primary-foreground
+
+Semantic
+├── success / success-hover / success-foreground
+├── danger / danger-hover / danger-foreground
+├── warning / warning-hover / warning-foreground
+└── info / info-hover / info-foreground
+```
+
+**Dark theme:**
+
+```text
+background: #0b0f14
+surface: #111820
+surface-elevated: #18212b
+foreground: #f1f5f9
+primary: #3b82f6
+```
+
+**Light theme:**
+
+```text
+background: #f8fafc
+surface: #ffffff
+surface-elevated: #ffffff
+foreground: #0f172a
+primary: #2563eb
+```
+
+**Tipografia:**
+
+```text
+font-family: Inter, ui-sans-serif, system-ui, sans-serif
+font-size: xs, sm, base, lg, xl, 2xl, 3xl, 4xl
+font-weight: normal (400), medium (500), semibold (600), bold (700)
+tabular-nums: font-variant-numeric: tabular-nums
+```
+
+**Radius:**
+
+```text
+sm: 0.25rem
+md: 0.375rem
+lg: 0.5rem
+xl: 0.75rem
+full: 9999rem
+```
+
+**Shadows:**
+
+```text
+sm, md, lg (com variações Dark/Light)
+```
+
+**System theme:**
+
+```text
+@media (prefers-color-scheme: dark) → aplica tokens dark automaticamente
+```
+
+**Validação:**
+
+```text
+npm run typecheck  → ✅ sucesso
+npm run lint       → ✅ 0 warnings, 0 errors
+npm run build      → ✅ sucesso
+```
+
+**Checklist:**
+
+```text
+[ x ] Tipografia definida
+[ x ] Escala tipográfica definida
+[ x ] Pesos definidos
+[ x ] Tabular numbers configurado
+
+[ x ] Spacing padronizado (Tailwind scale)
+[ x ] Radius padronizado
+[ x ] Shadows padronizadas
+
+[ x ] Dark funcionando
+[ x ] Light funcionando
+[ x ] System funcionando
+```
+
+---
+
+## 2026-08-25 — Fase 1.2 Bloco 3A: Button + IconButton + Badge
+
+**Fase:** 1 — Design System e Layout Base
+
+**Descrição:** Implementação dos componentes de ação (Button, IconButton) e Badges para o Design System do APM SYN.
+
+**Arquivos criados:**
+
+```text
+frontend/src/components/ui/button.tsx
+frontend/src/components/ui/icon-button.tsx
+frontend/src/components/ui/badge.tsx
+frontend/src/components/ui/spinner.tsx
+frontend/src/components/ui/index.ts
+```
+
+**Arquivos modificados:**
+
+```text
+frontend/src/pages/home-page.tsx       (playground atualizado)
+frontend/package.json                  (class-variance-authority, @radix-ui/react-slot)
+```
+
+**Dependências adicionadas:**
+
+```text
+class-variance-authority   ^0.7.1
+@radix-ui/react-slot       ^1.2.3
+```
+
+### Button
+
+Componente com suporte a:
+
+```text
+Variantes: primary, secondary, outline, ghost, danger
+Tamanhos: sm (h-8), md (h-10), lg (h-12) — md padrão
+Estados: disabled, loading, focus-visible
+Polimorfismo: asChild (via Radix Slot)
+```
+
+API:
+
+```tsx
+<Button>Save</Button>
+<Button variant="danger">Delete</Button>
+<Button loading>Saving...</Button>
+<Button asChild><a href="/link">Link</a></Button>
+```
+
+### IconButton
+
+Componente para ações somente por ícone:
+
+```text
+Variantes: primary, secondary, outline, ghost, danger
+Tamanhos: sm (32px), md (40px), lg (48px) — md padrão
+Ícone: sm → 16px, md → 18px, lg → 20px
+Exigência: aria-label obrigatório para acessibilidade
+```
+
+API:
+
+```tsx
+<IconButton aria-label="Edit"><Pencil /></IconButton>
+<IconButton variant="danger" aria-label="Delete"><Trash2 /></IconButton>
+```
+
+### Badge
+
+Componente para estados e categorias:
+
+```text
+Variantes: default, primary, success, warning, danger, info
+Tamanhos: sm (px-2, text-xs), md (px-2.5, text-sm) — md padrão
+Prop: dot (indicador visual opcional)
+Estilo: fundo com transparência + borda suave (bg-{color}/10, border-{color}/20)
+```
+
+API:
+
+```tsx
+<Badge variant="success">Active</Badge>
+<Badge variant="warning" dot>Pending</Badge>
+```
+
+### Spinner
+
+Componente base para estados de carregamento:
+
+```text
+Tamanhos: sm (16px), md (20px), lg (28px) — md padrão
+Cor: currentColor (herda do contexto pai)
+Animação: animate-spin (Tailwind)
+Acessibilidade: aria-hidden="true" por padrão
+```
+
+### Barrel Export
+
+Criado `index.ts` para facilitar imports:
+
+```tsx
+import { Button, Badge, IconButton, Spinner } from "@/components/ui";
+```
+
+### Playground
+
+`home-page.tsx` atualizado com seções:
+
+```text
+Buttons (variants, sizes, states, with icons)
+Icon Buttons (sizes, variants, states)
+Badges (variants, sizes, with dot)
+Spinner (sizes)
+Design Tokens (preview)
+```
+
+### Observações
+
+- CVA (class-variance-authority) utilizado para gerenciamento de variantes
+- Radix Slot utilizado para polimorfismo (asChild)
+- Spinner criado antecipadamente pois é dependência do Button loading
+- 3 warnings de lint (fast refresh: export de constants + components no mesmo arquivo) — não-bloqueadores, aceitos deliberadamente
+
+**Validação:**
+
+```text
+npm run typecheck  → ✅ sucesso
+npm run lint       → ✅ 3 warnings, 0 errors
+npm run build      → ✅ sucesso
+```
+
+**Checklist 3A:**
+
+```text
+[ x ] Button implementado
+[ x ] Button variants (primary, secondary, outline, ghost, danger)
+[ x ] Button sizes (sm, md, lg)
+[ x ] Button loading
+[ x ] Button disabled
+[ x ] Button focus-visible
+[ x ] Button asChild (polimorfismo)
+
+[ x ] IconButton implementado
+[ x ] IconButton variants
+[ x ] IconButton sizes
+[ x ] IconButton loading
+[ x ] aria-label
+
+[ x ] Badge implementado
+[ x ] Badge variants (default, primary, success, warning, danger, info)
+[ x ] Badge sizes (sm, md)
+[ x ] Badge dot prop
+
+[ x ] Tokens utilizados
+[ x ] Lucide integrado
+[ x ] Playground atualizado
+[ x ] Spinner implementado
+
+[ x ] typecheck ✓
+[ x ] lint ✓
+[ x ] build ✓
+```
+
+---
+
+## 2026-08-25 — Fase 1.2 Bloco 3B: Input + Label + Textarea + Select + Checkbox
+
+**Fase:** 1 — Design System e Layout Base
+
+**Descrição:** Implementação dos componentes de formulário para o Design System do APM SYN. Foco em composição, acessibilidade e integração futura com React Hook Form/Zod.
+
+**Arquivos criados:**
+
+```text
+frontend/src/components/ui/label.tsx
+frontend/src/components/ui/input.tsx
+frontend/src/components/ui/textarea.tsx
+frontend/src/components/ui/select.tsx
+frontend/src/components/ui/checkbox.tsx
+```
+
+**Arquivos modificados:**
+
+```text
+frontend/src/components/ui/index.ts    (barrel export atualizado)
+frontend/src/pages/home-page.tsx       (playground com forms)
+```
+
+### Label
+
+Componente para rótulos de campos:
+
+```text
+Props: htmlFor, required (indicador visual "*")
+Estilo: text-sm font-medium text-foreground
+Integração: peer-disabled para desabilitar quando Input está disabled
+```
+
+API:
+
+```tsx
+<Label htmlFor="wallet-name">Wallet name</Label>
+<Label required>Required field</Label>
+```
+
+### Input
+
+Componente de entrada de texto, próximo ao nativo:
+
+```text
+Props: todas as props nativas de <input>
+Estado de erro: via aria-invalid (não prop error message)
+Focus: ring-2 ring-offset-2
+Estilo: h-10 rounded-lg border bg-surface
+```
+
+API:
+
+```tsx
+<Input id="wallet-name" placeholder="Main Wallet" />
+<Input type="number" min="0" step="0.01" />
+<Input aria-invalid />
+<Input disabled />
+```
+
+### Textarea
+
+Componente para texto multi-linha:
+
+```text
+Props: todas as props nativas de <textarea>
+Estado de erro: via aria-invalid
+Resize: resize-y (padrão sensato)
+```
+
+API:
+
+```tsx
+<Textarea placeholder="Description" rows={3} />
+<Textarea disabled />
+```
+
+### Select
+
+Wrapper leve do `<select>` nativo:
+
+```text
+Props: todas as props nativas de <select>
+Aparência: appearance-none com ícone customizado via CSS
+Estado de erro: via aria-invalid
+```
+
+API:
+
+```tsx
+<Select defaultValue="BANK">
+  <option value="BANK">Bank</option>
+  <option value="CASH">Cash</option>
+</Select>
+```
+
+### Checkbox
+
+Input checkbox nativo estilizado:
+
+```text
+Props: todas as props nativas de <input type="checkbox">
+Estilo: h-4 w-4 rounded accent-primary
+```
+
+API:
+
+```tsx
+<Checkbox id="counts-goal" />
+<Checkbox disabled />
+```
+
+### Padrão de Estilo Compartilhado
+
+Todos os componentes de formulário compartilham:
+
+```text
+Border: border-border
+Focus: focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-border
+Error: aria-invalid:border-danger aria-invalid:focus-visible:ring-danger
+Disabled: disabled:cursor-not-allowed disabled:opacity-50
+Background: bg-surface
+Text: text-sm text-foreground
+Placeholder: placeholder:text-foreground-muted
+```
+
+### Playground
+
+`home-page.tsx` atualizado com seção "Forms":
+
+```text
+Forms
+├── Label + Input (Wallet name)
+├── Label + Input (Description)
+├── Label + Select (Type)
+├── Label + Textarea (Notes)
+├── Checkbox + Label (Count toward goal)
+├── Checkbox + Label (Disabled)
+├── States (Normal, Disabled, Error, Read Only)
+```
+
+### Integração Futura com React Hook Form
+
+Os componentes foram desenhados para aceitar diretamente:
+
+```tsx
+const { register } = useForm();
+<Input {...register("name")} aria-invalid={!!errors.name} />
+```
+
+Sem necessidade de wrappers ou adaptações.
+
+### Decisões
+
+- **Sem FieldError ainda** — será criado quando houver formulários reais
+- **Select nativo** — não substituir por dropdown customizado sem necessidade
+- **Checkbox nativo** — acessibilidade garantida pelo HTML
+- **Sem FormField** — abstração prematura, criar quando necessário
+
+**Validação:**
+
+```text
+npm run typecheck  → ✅ sucesso
+npm run lint       → ✅ 3 warnings, 0 errors
+npm run build      → ✅ sucesso
+```
+
+**Checklist 3B:**
+
+```text
+[ x ] Label implementado
+[ x ] Label htmlFor
+[ x ] Label required indicator
+
+[ x ] Input implementado
+[ x ] Input native props
+[ x ] Input error state (aria-invalid)
+[ x ] Input disabled state
+[ x ] Input readonly state
+[ x ] Input focus state
+
+[ x ] Textarea implementado
+[ x ] Textarea native props
+[ x ] Textarea error state
+[ x ] Textarea disabled state
+
+[ x ] Select implementado
+[ x ] Select native props
+[ x ] Select disabled state
+
+[ x ] Checkbox implementado
+[ x ] Checkbox native props
+[ x ] Checkbox disabled state
+
+[ x ] Acessibilidade
+[ x ] htmlFor/id association
+[ x ] aria-invalid
+[ x ] Keyboard navigation (nativa)
+
+[ x ] Tokens utilizados
+[ x ] Playground atualizado
+
+[ x ] typecheck ✓
+[ x ] lint ✓
+[ x ] build ✓
+```
+
+---
+
+## 2026-08-25 — Fase 1.2 Bloco 3C: Card + Separator + Alert
+
+**Fase:** 1 — Design System e Layout Base
+
+**Descrição:** Implementação dos componentes de estrutura visual (Card, Separator) e feedback contextual (Alert) para o Design System do APM SYN.
+
+**Arquivos criados:**
+
+```text
+frontend/src/components/ui/card.tsx
+frontend/src/components/ui/separator.tsx
+frontend/src/components/ui/alert.tsx
+```
+
+**Arquivos modificados:**
+
+```text
+frontend/src/components/ui/index.ts    (barrel export atualizado)
+frontend/src/pages/home-page.tsx       (playground com cards, separator, alerts)
+```
+
+### Card
+
+Componente de container para agrupar conteúdo:
+
+```text
+Componentes: Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter
+Estilo: rounded-xl border border-border bg-surface
+Header: p-6 com flex-col space-y-1.5
+Content: p-6 pt-0
+Footer: flex items-center p-6 pt-0
+```
+
+API:
+
+```tsx
+<Card>
+  <CardHeader>
+    <CardTitle>Portfolio</CardTitle>
+    <CardDescription>Current value</CardDescription>
+  </CardHeader>
+  <CardContent>$128,492.42</CardContent>
+  <CardFooter>
+    <Button>View details</Button>
+  </CardFooter>
+</Card>
+```
+
+### Separator
+
+Componente visual para dividir seções:
+
+```text
+Props: orientation ("horizontal" | "vertical")
+Acessibilidade: role="separator" + aria-orientation
+Horizontal: h-px w-full
+Vertical: h-full w-px
+Estilo: bg-border-subtle
+```
+
+API:
+
+```tsx
+<Separator />
+<Separator orientation="vertical" />
+```
+
+### Alert
+
+Componente para mensagens contextuals com ícones automáticos:
+
+```text
+Componentes: Alert, AlertTitle, AlertDescription
+Variantes: info, success, warning, danger
+Ícones automáticos (Lucide): Info, CheckCircle, TriangleAlert, CircleAlert
+Acessibilidade: role="alert"
+Estilo: rounded-xl border p-4 flex gap-3
+Cores: bg-{variant}/10 border-{variant}/20
+```
+
+API:
+
+```tsx
+<Alert variant="info">
+  <AlertTitle>Market data updated</AlertTitle>
+  <AlertDescription>Values refreshed.</AlertDescription>
+</Alert>
+
+<Alert variant="warning">Simple text only.</Alert>
+```
+
+### Decisões
+
+- **Card não é clicável** — estrutura visual pura, interatividade fica para feature
+- **Separator usa border-subtle** — visual discreto, não domina a página
+- **Alert com ícones automáticos** — diferent do Badge, o ícone é parte da linguagem visual
+- **role="alert" por padrão** — ajustar se gerar anúncios excessivos em testes
+- **Alert não conhece ApiError** — feature transforma erro em mensagem
+
+### Playground
+
+`home-page.tsx` atualizado com:
+
+```text
+Cards
+├── Portfolio (Card + CardHeader + CardContent + CardFooter)
+└── Wallets (lista de valores)
+
+Separator
+├── Horizontal
+└── Vertical (Wallets | Transactions | Goals)
+
+Alerts
+├── info (com título + descrição)
+├── success (com título + descrição)
+├── warning (texto simples)
+└── danger (com título + descrição)
+```
+
+Seções anteriores agora separadas visualmente com `<Separator />`.
+
+**Validação:**
+
+```text
+npm run typecheck  → ✅ sucesso
+npm run lint       → ✅ 4 warnings, 0 errors
+npm run build      → ✅ sucesso
+```
+
+**Checklist 3C:**
+
+```text
+[ x ] Card implementado
+[ x ] CardHeader
+[ x ] CardTitle
+[ x ] CardDescription
+[ x ] CardContent
+[ x ] CardFooter
+
+[ x ] Separator implementado
+[ x ] Separator horizontal
+[ x ] Separator vertical
+
+[ x ] Alert implementado
+[ x ] AlertTitle
+[ x ] AlertDescription
+[ x ] Alert info
+[ x ] Alert success
+[ x ] Alert warning
+[ x ] Alert danger
+[ x ] Ícones automáticos (Lucide)
+
+[ x ] Acessibilidade
+[ x ] role="alert" no Alert
+[ x ] role="separator" no Separator
+[ x ] aria-orientation
+
+[ x ] Tokens utilizados
+[ x ] Lucide integrado
+[ x ] Playground atualizado
+
+[ x ] typecheck ✓
+[ x ] lint ✓
+[ x ] build ✓
+```
+
+---
+
+## 2026-08-25 — Fase 1.2 Bloco 3D: Spinner + LoadingState + EmptyState + ErrorState
+
+**Fase:** 1 — Design System e Layout Base
+
+**Descrição:** Implementação dos componentes de feedback visual para estados de carregamento, dados vazios e erros. Define como o APM SYN se comporta enquanto os dados estão chegando, quando não existem dados e quando algo dá errado.
+
+**Arquivos criados:**
+
+```text
+frontend/src/components/ui/loading-state.tsx
+frontend/src/components/ui/empty-state.tsx
+frontend/src/components/ui/error-state.tsx
+```
+
+**Arquivos modificados:**
+
+```text
+frontend/src/components/ui/index.ts    (barrel export atualizado)
+frontend/src/pages/home-page.tsx       (playground com feedback states)
+```
+
+### Spinner (já existente)
+
+Componente base criado no 3A, validado neste bloco:
+
+```text
+Tamanhos: sm (16px), md (20px), lg (28px) — md padrão
+Cor: currentColor
+Animação: animate-spin
+Acessibilidade: aria-hidden="true"
+```
+
+### LoadingState
+
+Container para estado de carregamento de conteúdo:
+
+```text
+Props: children (mensagem opcional)
+Acessibilidade: role="status" + aria-live="polite"
+Estilo: flex flex-col items-center justify-center gap-3 py-12
+Ícone: Spinner lg
+```
+
+API:
+
+```tsx
+<LoadingState />
+<LoadingState>Loading wallets...</LoadingState>
+```
+
+### EmptyState
+
+Container para quando não existem dados:
+
+```text
+Props: icon (ReactNode opcional), title (obrigatório), description (opcional), action (ReactNode opcional)
+Ícone padrão: Inbox (Lucide)
+Estilo: flex flex-col items-center justify-center gap-4 py-12
+```
+
+API:
+
+```tsx
+<EmptyState
+  icon={<WalletCards className="h-12 w-12" />}
+  title="No wallets yet"
+  description="Create your first wallet."
+  action={<Button>Create wallet</Button>}
+/>
+```
+
+### ErrorState
+
+Container para quando a requisição falhou:
+
+```text
+Props: icon (ReactNode opcional), title (obrigatório), description (opcional), action (ReactNode opcional)
+Ícone padrão: TriangleAlert (Lucide)
+Cor: text-danger no ícone
+Acessibilidade: role="alert"
+Estilo: flex flex-col items-center justify-center gap-4 py-12
+```
+
+API:
+
+```tsx
+<ErrorState
+  title="Unable to load wallets"
+  description="Something went wrong."
+  action={<Button variant="outline">Try again</Button>}
+/>
+```
+
+### Decisões
+
+- **Sem Skeleton** — fica para Bloco 4/5 quando tivermos telas reais
+- **ErrorState ≠ Alert** — Alert informa, ErrorState representa falha do conteúdo
+- **action é ReactNode** — componente não sabe como fazer retry, feature decide
+- **icon é ReactNode** — permite usar ícones Lucide ou customizados
+- **ErrorState não conhece refetch()** — feature usa `action={<Button onClick={() => refetch()}>Try again</Button>}`
+
+### Integração com TanStack Query (futura)
+
+```tsx
+if (isLoading) return <LoadingState>Loading wallets...</LoadingState>;
+if (isError) return <ErrorState title="Error" action={<Button onClick={refetch}>Try again</Button>} />;
+if (data.length === 0) return <EmptyState title="No data" action={<Button>Create</Button>} />;
+return <DataList data={data} />;
+```
+
+### Playground
+
+`home-page.tsx` atualizado com seção "Feedback States":
+
+```text
+Feedback States
+├── Loading (Card + LoadingState com mensagem)
+├── Empty (Card + EmptyState com ícone customizado + action)
+└── Error (Card + ErrorState com action "Try again")
+```
+
+**Validação:**
+
+```text
+npm run typecheck  → ✅ sucesso
+npm run lint       → ✅ 4 warnings, 0 errors
+npm run build      → ✅ sucesso
+```
+
+**Checklist 3D:**
+
+```text
+[ x ] Spinner verificado (3A)
+[ x ] Spinner sizes (sm, md, lg)
+
+[ x ] LoadingState implementado
+[ x ] LoadingState mensagem opcional
+[ x ] role="status"
+[ x ] aria-live="polite"
+
+[ x ] EmptyState implementado
+[ x ] EmptyState action (ReactNode)
+[ x ] EmptyState icon (ReactNode)
+
+[ x ] ErrorState implementado
+[ x ] ErrorState action (ReactNode)
+[ x ] ErrorState icon (ReactNode)
+[ x ] role="alert"
+
+[ x ] Acessibilidade
+[ x ] role="status" no Loading
+[ x ] role="alert" no Error
+[ x ] aria-hidden no Spinner
+
+[ x ] Dark
+[ x ] Light
+[ x ] System
+
+[ x ] Playground atualizado
+
+[ x ] typecheck ✓
+[ x ] lint ✓
+[ x ] build ✓
+```
+
+---
+
+## 2026-08-25 — Fase 1.2 Bloco 3E: Playground + Revisão + Encerramento
+
+**Fase:** 1 — Design System e Layout Base
+
+**Descrição:** Criação do playground dedicado do Design System, revisão final de todos os componentes e encerramento oficial da Fase 1.2.
+
+**Arquivos criados:**
+
+```text
+frontend/src/pages/ui-playground-page.tsx
+```
+
+**Arquivos modificados:**
+
+```text
+frontend/src/app/router/index.tsx    (rota /app/ui adicionada)
+```
+
+### Playground Page
+
+Rota dedicada `/app/ui` para visualização e teste de todos os componentes:
+
+```text
+Seções:
+├── Header (título + botão voltar + theme toggle)
+├── Buttons (variants, sizes, states, with icons)
+├── Icon Buttons (sizes, variants, states)
+├── Badges (variants, sizes, with dot)
+├── Spinner (sm, md, lg com labels)
+├── Forms (Label, Input, Textarea, Select, Checkbox + estados)
+├── Cards (Portfolio + Wallets)
+├── Separator (horizontal + vertical)
+├── Alerts (info, success, warning, danger)
+├── Feedback States (Loading, Empty, Error)
+├── Design Tokens (preview de cores e tipografia)
+└── Component Summary (resumo de todos os componentes)
+```
+
+### Responsividade
+
+- Grid responsivo para Cards (`sm:grid-cols-2`)
+- Forms em grid (`md:grid-cols-2`)
+- Flex wrap para badges e botões
+- Component Summary em grid (`sm:grid-cols-2 lg:grid-cols-3`)
+
+### Tema
+
+- Dark/Light/System toggle no playground
+- Todos os componentes consomem Design Tokens do Bloco 2
+- Nenhuma paleta paralela — tudo via `index.css` @theme
+
+### Arquitetura Final do Design System
+
+```text
+src/components/ui/
+├── alert.tsx           (3C)
+├── badge.tsx           (3A)
+├── button.tsx          (3A)
+├── card.tsx            (3C)
+├── checkbox.tsx        (3B)
+├── empty-state.tsx     (3D)
+├── error-state.tsx     (3D)
+├── icon-button.tsx     (3A)
+├── index.ts            (barrel export)
+├── input.tsx           (3B)
+├── label.tsx           (3B)
+├── loading-state.tsx   (3D)
+├── select.tsx          (3B)
+├── separator.tsx       (3C)
+├── spinner.tsx         (3A/3D)
+└── textarea.tsx        (3B)
+
+Total: 15 arquivos
+```
+
+### Checklist Final — Fase 1.2 Completa
+
+```text
+[ x ] Button (primary, secondary, outline, ghost, danger)
+[ x ] Button (sm, md, lg)
+[ x ] Button (disabled, loading, focus-visible)
+[ x ] Button (asChild polymorphism)
+[ x ] IconButton (5 variants, 3 sizes)
+[ x ] IconButton (aria-label obrigatório)
+[ x ] Badge (default, primary, success, warning, danger, info)
+[ x ] Badge (sm, md)
+[ x ] Badge (dot indicator)
+
+[ x ] Label (htmlFor, required)
+[ x ] Input (native props, aria-invalid, error state)
+[ x ] Textarea (native props, error state)
+[ x ] Select (native HTML wrapper)
+[ x ] Checkbox (native input, accent-primary)
+
+[ x ] Card (Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter)
+[ x ] Separator (horizontal, vertical, role="separator")
+[ x ] Alert (info, success, warning, danger, auto icons, role="alert")
+
+[ x ] Spinner (sm, md, lg, currentColor)
+[ x ] LoadingState (role="status", aria-live="polite")
+[ x ] EmptyState (title, description, icon, action)
+[ x ] ErrorState (title, description, icon, action, role="alert")
+
+[ x ] Dark funcionando
+[ x ] Light funcionando
+[ x ] System funcionando
+
+[ x ] Estados disabled
+[ x ] Estados loading
+[ x ] Estados error
+
+[ x ] Acessibilidade básica
+[ x ] Playground visual (/app/ui)
+[ x ] Component Summary
+
+[ x ] Tokens utilizados (sem paleta paralela)
+[ x ] Lucide integrado
+[ x ] CVA para variantes
+[ x ] Radix Slot para asChild
+
+[ x ] typecheck ✓
+[ x ] lint ✓
+[ x ] build ✓
+```
+
+### Dependências Adicionadas
+
+```text
+class-variance-authority   ^0.7.1   (gerenciamento de variantes)
+@radix-ui/react-slot       ^1.2.3   (polimorfismo asChild)
+```
+
+### Nota sobre Chunk Size
+
+Build warn: 505 KB bundle. Aceitável para dev — será endereçado com code splitting na Fase 2.
+
+---
+
+## 2026-08-25 — Fix: react(only-export-components) warnings
+
+**Problema:** Lint emitia 4 warnings do `react(only-export-components)` porque `button.tsx`, `icon-button.tsx`, `badge.tsx` e `alert.tsx` exportavam constantes (`*Variants`) junto com componentes, quebrando o Fast Refresh.
+
+**Solução:** Centralização de todas as definições CVA em um único arquivo `src/lib/variants.ts`.
+
+**Arquivos modificados:**
+
+```text
+src/lib/variants.ts           (CRIADO — 4 definitions: buttonVariants, iconButtonVariants, badgeVariants, alertVariants)
+src/components/ui/button.tsx  (MODIFICADO — importa de @/lib/variants, exporta apenas Button)
+src/components/ui/icon-button.tsx (MODIFICADO — importa de @/lib/variants, exporta apenas IconButton)
+src/components/ui/badge.tsx   (MODIFICADO — importa de @/lib/variants, exporta apenas Badge)
+src/components/ui/alert.tsx   (MODIFICADO — importa de @/lib/variants, exporta Alert, AlertTitle, AlertDescription)
+src/components/ui/index.ts    (MODIFICADO — re-exporta variante de @/lib/variants)
+```
+
+**Antes (4 warnings):**
+
+```text
+button.tsx:     export { Button, buttonVariants };
+icon-button.tsx: export { IconButton, iconButtonVariants };
+badge.tsx:      export { Badge, badgeVariants };
+alert.tsx:      export { Alert, AlertTitle, AlertDescription, alertVariants };
+```
+
+**Depois (0 warnings):**
+
+```text
+src/lib/variants.ts:           export const buttonVariants = cva(...)
+src/lib/variants.ts:           export const iconButtonVariants = cva(...)
+src/lib/variants.ts:           export const badgeVariants = cva(...)
+src/lib/variants.ts:           export const alertVariants = cva(...)
+src/components/ui/index.ts:    export { buttonVariants, iconButtonVariants, badgeVariants, alertVariants } from "@/lib/variants"
+```
+
+**Validação:**
+
+```text
+npm run typecheck  → ✅ sucesso
+npm run lint       → ✅ 0 warnings, 0 errors
+npm run build      → ✅ sucesso
+```
+
+---
+
+**Fase 1.2 — Design System e Layout Base — ENCERRADA** ✅

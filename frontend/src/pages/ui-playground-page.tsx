@@ -14,7 +14,7 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { LoadingState } from "@/components/ui/loading-state";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
-import { Pencil, Trash2, MoreHorizontal, Save, Check, WalletCards, RefreshCw } from "lucide-react";
+import { Pencil, Trash2, MoreHorizontal, Save, Check, WalletCards, RefreshCw, ArrowLeft } from "lucide-react";
 
 function setTheme(theme: "dark" | "light" | "system") {
   const root = document.documentElement;
@@ -27,21 +27,31 @@ function setTheme(theme: "dark" | "light" | "system") {
   }
 }
 
-export function HomePage() {
+export function UiPlaygroundPage() {
   return (
     <main className="min-h-screen bg-background text-foreground">
-      <div className="max-w-4xl mx-auto py-12 px-4 space-y-12">
-        <div className="text-center space-y-2">
-          <h1 className="text-4xl font-bold">APM SYN</h1>
-          <p className="text-foreground-secondary">Design System — Component Playground</p>
+      <div className="max-w-5xl mx-auto py-8 px-4 sm:px-6 space-y-10">
+        {/* Header */}
+        <div className="space-y-4">
+          <Link to="/app" className="inline-flex items-center gap-1 text-sm text-foreground-secondary hover:text-foreground transition-colors">
+            <ArrowLeft className="h-4 w-4" />
+            Back to App
+          </Link>
+
+          <div className="text-center space-y-2">
+            <h1 className="text-3xl sm:text-4xl font-bold">APM SYN</h1>
+            <p className="text-foreground-secondary">Design System — Component Playground</p>
+          </div>
+
+          {/* Theme Toggle */}
+          <div className="flex gap-2 justify-center">
+            <Button variant="ghost" size="sm" onClick={() => setTheme("dark")}>Dark</Button>
+            <Button variant="ghost" size="sm" onClick={() => setTheme("light")}>Light</Button>
+            <Button variant="ghost" size="sm" onClick={() => setTheme("system")}>System</Button>
+          </div>
         </div>
 
-        {/* Theme Toggle */}
-        <div className="flex gap-2 justify-center">
-          <Button variant="ghost" onClick={() => setTheme("dark")}>Dark</Button>
-          <Button variant="ghost" onClick={() => setTheme("light")}>Light</Button>
-          <Button variant="ghost" onClick={() => setTheme("system")}>System</Button>
-        </div>
+        <Separator />
 
         {/* BUTTONS */}
         <section className="space-y-4">
@@ -164,9 +174,18 @@ export function HomePage() {
           <h2 className="text-xl font-semibold border-b border-border pb-2">Spinner</h2>
 
           <div className="flex flex-wrap items-center gap-4">
-            <Spinner size="sm" />
-            <Spinner size="md" />
-            <Spinner size="lg" />
+            <div className="flex items-center gap-2">
+              <Spinner size="sm" />
+              <span className="text-sm text-foreground-secondary">sm</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Spinner size="md" />
+              <span className="text-sm text-foreground-secondary">md</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Spinner size="lg" />
+              <span className="text-sm text-foreground-secondary">lg</span>
+            </div>
           </div>
         </section>
 
@@ -176,45 +195,46 @@ export function HomePage() {
         <section className="space-y-6">
           <h2 className="text-xl font-semibold border-b border-border pb-2">Forms</h2>
 
-          <div className="max-w-md space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="wallet-name">Wallet name</Label>
-              <Input id="wallet-name" name="name" placeholder="Main Wallet" />
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="wallet-name">Wallet name</Label>
+                <Input id="wallet-name" name="name" placeholder="Main Wallet" />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="wallet-desc">Description</Label>
+                <Input id="wallet-desc" name="description" placeholder="Personal wallet" />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="wallet-type">Type</Label>
+                <Select id="wallet-type" name="type" defaultValue="BANK">
+                  <option value="BANK">Bank</option>
+                  <option value="CASH">Cash</option>
+                  <option value="DIGITAL_WALLET">Digital Wallet</option>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="wallet-notes">Notes</Label>
+                <Textarea id="wallet-notes" name="notes" placeholder="Additional notes..." rows={3} />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Checkbox id="counts-goal" name="countsGoal" />
+                <Label htmlFor="counts-goal">Count toward goal</Label>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Checkbox id="disabled-check" disabled />
+                <Label htmlFor="disabled-check">Disabled option</Label>
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="wallet-desc">Description</Label>
-              <Input id="wallet-desc" name="description" placeholder="Personal wallet" />
-            </div>
+            <div className="space-y-4">
+              <p className="text-sm text-foreground-secondary font-medium">States</p>
 
-            <div className="space-y-2">
-              <Label htmlFor="wallet-type">Type</Label>
-              <Select id="wallet-type" name="type" defaultValue="BANK">
-                <option value="BANK">Bank</option>
-                <option value="CASH">Cash</option>
-                <option value="DIGITAL_WALLET">Digital Wallet</option>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="wallet-notes">Notes</Label>
-              <Textarea id="wallet-notes" name="notes" placeholder="Additional notes..." rows={3} />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Checkbox id="counts-goal" name="countsGoal" />
-              <Label htmlFor="counts-goal">Count toward goal</Label>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Checkbox id="disabled-check" disabled />
-              <Label htmlFor="disabled-check">Disabled option</Label>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <p className="text-sm text-foreground-secondary">States</p>
-            <div className="max-w-md space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="normal-input">Normal</Label>
                 <Input id="normal-input" placeholder="Normal input" />
@@ -235,6 +255,11 @@ export function HomePage() {
                 <Label htmlFor="readonly-input">Read Only</Label>
                 <Input id="readonly-input" value="Read only value" readOnly />
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="required-input">Required <span className="text-danger">*</span></Label>
+                <Input id="required-input" placeholder="Required field" required />
+              </div>
             </div>
           </div>
         </section>
@@ -245,7 +270,7 @@ export function HomePage() {
         <section className="space-y-4">
           <h2 className="text-xl font-semibold border-b border-border pb-2">Cards</h2>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2">
             <Card>
               <CardHeader>
                 <CardTitle>Portfolio</CardTitle>
@@ -343,10 +368,9 @@ export function HomePage() {
         <Separator />
 
         {/* FEEDBACK STATES */}
-        <section className="space-y-8">
+        <section className="space-y-6">
           <h2 className="text-xl font-semibold border-b border-border pb-2">Feedback States</h2>
 
-          {/* Loading */}
           <div className="space-y-3">
             <p className="text-sm text-foreground-secondary">Loading</p>
             <Card>
@@ -356,7 +380,6 @@ export function HomePage() {
             </Card>
           </div>
 
-          {/* Empty */}
           <div className="space-y-3">
             <p className="text-sm text-foreground-secondary">Empty</p>
             <Card>
@@ -371,7 +394,6 @@ export function HomePage() {
             </Card>
           </div>
 
-          {/* Error */}
           <div className="space-y-3">
             <p className="text-sm text-foreground-secondary">Error</p>
             <Card>
@@ -425,11 +447,99 @@ export function HomePage() {
           </div>
         </section>
 
-        <div className="text-center pt-4 border-t border-border">
-          <Link to="/app">
-            <Button>Open App</Button>
-          </Link>
-        </div>
+        <Separator />
+
+        {/* Component Summary */}
+        <section className="space-y-4">
+          <h2 className="text-xl font-semibold border-b border-border pb-2">Component Summary</h2>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Actions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="text-sm text-foreground-secondary space-y-1">
+                  <li>Button (5 variants, 3 sizes)</li>
+                  <li>IconButton (5 variants, 3 sizes)</li>
+                  <li>Badge (6 variants, 2 sizes)</li>
+                </ul>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Forms</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="text-sm text-foreground-secondary space-y-1">
+                  <li>Label (required indicator)</li>
+                  <li>Input (native props, error state)</li>
+                  <li>Textarea (native props)</li>
+                  <li>Select (native wrapper)</li>
+                  <li>Checkbox (native input)</li>
+                </ul>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Structure</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="text-sm text-foreground-secondary space-y-1">
+                  <li>Card (6 sub-components)</li>
+                  <li>Separator (horizontal/vertical)</li>
+                  <li>Alert (4 variants, auto icons)</li>
+                </ul>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Feedback</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="text-sm text-foreground-secondary space-y-1">
+                  <li>Spinner (3 sizes)</li>
+                  <li>LoadingState (role=status)</li>
+                  <li>EmptyState (icon, action)</li>
+                  <li>ErrorState (role=alert)</li>
+                </ul>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Accessibility</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="text-sm text-foreground-secondary space-y-1">
+                  <li>role="alert" (Error, Alert)</li>
+                  <li>role="status" (Loading)</li>
+                  <li>aria-invalid (forms)</li>
+                  <li>aria-label (IconButton)</li>
+                  <li>aria-hidden (Spinner)</li>
+                </ul>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Stack</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="text-sm text-foreground-secondary space-y-1">
+                  <li>React 19 + TypeScript 6</li>
+                  <li>Tailwind CSS 4</li>
+                  <li>CVA (variants)</li>
+                  <li>Radix Slot (asChild)</li>
+                  <li>Lucide React (icons)</li>
+                </ul>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
       </div>
     </main>
   );

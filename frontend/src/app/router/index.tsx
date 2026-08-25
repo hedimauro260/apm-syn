@@ -4,6 +4,7 @@ import { AppLayout } from "@/layouts/app-layout";
 import { AppPage } from "@/pages/app-page";
 import { HomePage } from "@/pages/home-page";
 import { NotFoundPage } from "@/pages/not-found-page";
+import { UiPlaygroundPage } from "@/pages/ui-playground-page";
 
 export const router = createBrowserRouter([
   {
@@ -17,6 +18,10 @@ export const router = createBrowserRouter([
       {
         index: true,
         element: <AppPage />,
+      },
+      {
+        path: "ui",
+        element: <UiPlaygroundPage />,
       },
     ],
   },
