@@ -15,17 +15,7 @@ import { LoadingState } from "@/components/ui/loading-state";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { Pencil, Trash2, MoreHorizontal, Save, Check, WalletCards, RefreshCw } from "lucide-react";
-
-function setTheme(theme: "dark" | "light" | "system") {
-  const root = document.documentElement;
-  root.classList.remove("dark", "light");
-
-  if (theme === "dark") {
-    root.classList.add("dark");
-  } else if (theme === "light") {
-    root.classList.add("light");
-  }
-}
+import { setTheme } from "@/lib/theme";
 
 export function HomePage() {
   return (
@@ -40,7 +30,6 @@ export function HomePage() {
         <div className="flex gap-2 justify-center">
           <Button variant="ghost" onClick={() => setTheme("dark")}>Dark</Button>
           <Button variant="ghost" onClick={() => setTheme("light")}>Light</Button>
-          <Button variant="ghost" onClick={() => setTheme("system")}>System</Button>
         </div>
 
         {/* BUTTONS */}

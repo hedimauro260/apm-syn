@@ -1342,4 +1342,296 @@ npm run build      → ✅ sucesso
 
 ---
 
-**Fase 1.2 — Design System e Layout Base — ENCERRADA** ✅
+## 2026-08-25 — Fase 1.3: App Shell e Navegação (Bloco 4A)
+
+**Fase:** 1 — Design System e Layout Base
+
+**Descrição:** Implementação do esqueleto estrutural da aplicação com navegação centralizada, rotas aninhadas e Sidebar funcional.
+
+**Arquivos criados:**
+
+```text
+src/config/navigation.ts                  (navegação centralizada)
+src/components/layout/app-sidebar.tsx     (Sidebar com NavLink)
+src/pages/dashboard-page.tsx              (placeholder)
+src/pages/wallets-page.tsx                (placeholder)
+src/pages/transactions-page.tsx           (placeholder)
+src/pages/websites-page.tsx               (placeholder)
+src/pages/goals-page.tsx                  (placeholder)
+src/pages/portfolio-page.tsx              (placeholder)
+```
+
+**Arquivos modificados:**
+
+```text
+src/layouts/app-layout.tsx    (evoluiu de Outlet-only para Sidebar + main + Outlet)
+src/app/router/index.tsx      (rotas aninhadas /app/* + redirect)
+```
+
+**Arquivos removidos:**
+
+```text
+src/pages/app-page.tsx        (substituída por dashboard-page.tsx)
+```
+
+### navigation.ts
+
+Arquivo único de verdade para navegação principal:
+
+```text
+navigationItems[]
+├── Dashboard    → /app/dashboard     → LayoutDashboard
+├── Wallets      → /app/wallets       → WalletCards
+├── Transactions → /app/transactions  → ArrowLeftRight
+├── Websites     → /app/websites      → Globe
+├── Goals        → /app/goals         → Target
+└── Portfolio    → /app/portfolio     → ChartNoAxesCombined
+```
+
+Tipo exportado: `NavigationItem { label, to, icon }`
+
+### AppSidebar
+
+```text
+<aside>                          (w-64, shrink-0, border-r)
+  <nav>
+    <div>APM SYN</div>           (logo area)
+    <ul>
+      {navigationItems.map}      (NavLink com isActive styling)
+    </ul>
+  </nav>
+</aside>
+```
+
+- Consome `navigationItems` de `@/config/navigation`
+- Usa `NavLink` do React Router (não Link)
+- `isActive` detecta automaticamente a rota ativa
+- Active: `bg-primary/10 text-primary`
+- Inactive: `text-foreground-secondary hover:bg-surface hover:text-foreground`
+
+### AppLayout
+
+```text
+┌───────────────┬─────────────────────────────┐
+│               │                             │
+│   Sidebar     │          Content            │
+│   (w-64)      │    flex-1 min-w-0 p-8       │
+│               │                             │
+│               │          <Outlet />         │
+│               │                             │
+└───────────────┴─────────────────────────────┘
+```
+
+- `min-h-dvh` — altura mínima da viewport
+- `aside` → `shrink-0` (não encolhe)
+- `main` → `flex-1 min-w-0 overflow-auto` (preenche espaço restante)
+
+### Router
+
+```text
+/
+├── HomePage
+│
+├── /app
+│   ├── index → Navigate to /app/dashboard (replace)
+│   ├── /dashboard → DashboardPage
+│   ├── /wallets → WalletsPage
+│   ├── /transactions → TransactionsPage
+│   ├── /websites → WebsitesPage
+│   ├── /goals → GoalsPage
+│   ├── /portfolio → PortfolioPage
+│   └── /ui → UiPlaygroundPage
+│
+└── * → NotFoundPage (404)
+```
+
+### Checklist 4A
+
+```text
+[ x ] navigation.ts criado
+[ x ] navegação centralizada (6 itens, Lucide icons, tipo NavigationItem)
+[ x ] 6 páginas placeholder criadas
+[ x ] AppSidebar criada (NavLink, isActive, aside/nav semântico)
+[ x ] AppSidebar usa navigationItems
+[ x ] NavLink utilizado (não Link)
+[ x ] AppLayout possui Sidebar + main + Outlet
+[ x ] /app redireciona para /app/dashboard (Navigate replace)
+[ x ] todas as 6 rotas funcionam
+[ x ] app-page.tsx removido
+[ x ] 404 continua funcionando
+
+[ x ] typecheck ✓
+[ x ] lint ✓ (0 warnings, 0 errors)
+[ x ] build ✓
+```
+
+---
+
+## 2026-08-25 — Fase 1.3 Bloco 4B: Sidebar Desktop Completa
+
+**Fase:** 1 — Design System e Layout Base
+
+**Descrição:** Implementação completa da Sidebar desktop com expand/collapse, 3 seções, brand, navigation, footer com theme toggle e portfolio overview.
+
+**Arquivos criados:**
+
+```text
+src/lib/theme.ts                                (setTheme/getTheme compartilhado)
+src/pages/settings-page.tsx                     (placeholder)
+src/components/layout/AppSidebar/sidebar-brand.tsx        (logo + collapse button)
+src/components/layout/AppSidebar/sidebar-navigation.tsx   (sections + NavLinks)
+src/components/layout/AppSidebar/sidebar-footer.tsx       (theme toggle + PWA + portfolio)
+src/components/layout/AppSidebar/portfolio-overview.tsx   (card visual)
+```
+
+**Arquivos modificados:**
+
+```text
+src/config/navigation.ts                       (navigationItems → navigationSections)
+src/components/layout/AppSidebar/app-sidebar.tsx  (rewritten with state + sub-components)
+src/components/layout/app-layout.tsx           (h-dvh, overflow-hidden)
+src/app/router/index.tsx                       (added /app/settings route)
+```
+
+### navigation.ts → navigationSections
+
+```text
+Main
+├── Dashboard    → /app/dashboard     → LayoutDashboard
+└── Portfolio    → /app/portfolio     → ChartNoAxesCombined
+
+Manage
+├── Websites     → /app/websites      → Globe
+├── Wallets      → /app/wallets       → WalletCards
+├── Transactions → /app/transactions  → ArrowLeftRight
+└── Goals        → /app/goals         → Target
+
+System
+└── Settings     → /app/settings      → Settings
+```
+
+### Estrutura da Sidebar
+
+```text
+┌──────────────────────────────────────┐
+│                                      │
+│   ┌──── SidebarBrand ────────────┐   │
+│   │  ◉ APM SYN                   │──◉│ ← Collapse button (saliente)
+│   │    Asset Portfolio Manager    │   │
+│   └──────────────────────────────┘   │
+│                                      │
+│══════════════════════════════════════│
+│                                      │
+│  MAIN                                │
+│  ◉ Dashboard                         │
+│  ◉ Portfolio                         │
+│                                      │
+│  MANAGE                              │
+│  ◉ Websites                          │
+│  ◉ Wallets                           │
+│  ◉ Transactions                      │
+│  ◉ Goals                             │
+│                                      │
+│  SYSTEM                              │
+│  ◉ Settings                          │
+│                                      │
+│══════════════════════════════════════│
+│                                      │
+│  🌙/☀/⊙ Theme                        │
+│  ↓ Install app (placeholder)         │
+│                                      │
+│  ┌────────────────────────────────┐  │
+│  │ ◉ Portfolio: $12,450.00        │  │
+│  │         +8.42%                 │  │
+│  └────────────────────────────────┘  │
+│                                      │
+└──────────────────────────────────────┘
+```
+
+### Comportamento Expandido/Recolhido
+
+```text
+Expandido:  w-64 (256px)
+Recolhido:  w-[72px]
+Transição:  200ms ease-in-out (transition-[width])
+```
+
+- **Desktop (≥1024px):** inicia expandido
+- **Tablet (768-1023px):** inicia recolhido
+- **Resize:** tablet → recolhido, desktop → expandido
+- **Mobile (<768px):** Sidebar não aparece (app-layout esconde)
+
+### SidebarBrand
+
+- Ícone: `Workflow` do Lucide (representa sincronização)
+- Wordmark: "APM SYN" (bold) + subtitle "Asset Portfolio Manager"
+- Collapsed: apenas ícone
+- **Botão collapse:** `position: absolute`, `right: -12px`, circular, `bg-primary`, `z-10`
+  - Expandido: `PanelLeftClose`
+  - Recolhido: `PanelLeftOpen`
+  - `aria-label` + `title`
+
+### SidebarNavigation
+
+- Seções com títulos: MAIN, MANAGE, SYSTEM
+- Collapsed: títulos escondidos, separadores visuais entre seções
+- NavLink com `isActive` → `bg-white/14 text-white`
+- Hover → `bg-white/8 text-white`
+- Default → `text-white/70`
+- `title` attribute no collapsed para tooltip nativo
+
+### SidebarFooter
+
+- **ThemeToggle:** ciclo Dark → Light → System, ícone muda (Moon/Sun/Monitor)
+- **PWA Install:** placeholder desabilitado
+- **PortfolioOverview:** card visual com valor + change
+
+### PortfolioOverview
+
+- Expandido: valor + percentual
+- Recolhido: ícone WalletCards + TrendingUp/TrendingDown
+- Dados: placeholder (não conectado à API)
+
+### Sidebar Visual
+
+- Background: `bg-primary` (constante em Dark/Light)
+- Bordas entre seções: `border-white/10`
+- Transparências: `white/8`, `white/14`, `white/40`, `white/50`, `white/70`
+- Tokens: via CSS custom properties (--color-primary)
+
+### Checklist 4B
+
+```text
+[ x ] navigationSections (3 grupos: Main, Manage, System)
+[ x ] Settings adicionado
+[ x ] SettingsPage criada
+[ x ] Router atualizado (/app/settings)
+[ x ] SidebarBrand com logo (Workflow icon)
+[ x ] SidebarBrand collapse button (saliente, circular)
+[ x ] SidebarNavigation com seções
+[ x ] SidebarNavigation NavLink com isActive
+[ x ] SidebarFooter com ThemeToggle (Dark/Light/System)
+[ x ] SidebarFooter com PWA placeholder
+[ x ] SidebarFooter com PortfolioOverview
+[ x ] PortfolioOverview visual (expandido + recolhido)
+[ x ] PortfolioOverview recolhido = wallet icon
+[ x ] Estado expandido/recolhido (useState + media query)
+[ x ] Desktop inicia expandido (≥1024px)
+[ x ] Tablet inicia recolhido (768-1023px)
+[ x ] Resize tratado (resize listener)
+[ x ] Transição 200ms width
+[ x ] Active state (bg-white/14)
+[ x ] Hover state (bg-white/8)
+[ x ] Focus-visible no botão collapse
+[ x ] aria-labels
+[ x ] Labels ocultos no collapsed
+[ x ] Sidebar bg-primary (Dark/Light consistente)
+
+[ x ] typecheck ✓
+[ x ] lint ✓ (0 warnings, 0 errors)
+[ x ] build ✓
+```
+
+---
+
+**Fase 1.3 — App Shell e Navegação — EM ANDAMENTO**
