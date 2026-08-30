@@ -1,11 +1,19 @@
+import { useState } from "react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
-import { Plus, Ellipsis } from "lucide-react";
+import { Plus } from "lucide-react";
+import { SummaryWallets } from "./Wallets/summary-wallets";
+import { AnalysisWallets } from "./Wallets/analysis-wallets";
+import { ListWallets } from "./Wallets/list-wallets";
+import { CardsWallets } from "./Wallets/cards-wallets";
+import { AddWalletModal } from "@/components/modals/add-wallets";
 
 export function WalletsPage() {
+  const [addOpen, setAddOpen] = useState(false);
   return (
-    <div className="space-y-2 border border-border">
-      <div className="flex">
+    <div className="space-y-2">
+      {/* Header, Summary, Analytics, All Wallets List*/}
+      <div className="flex flex-col lg:flex-row">
         <div className="flex-1 p-4">
           <PageHeader
             title="Wallets"
@@ -13,7 +21,7 @@ export function WalletsPage() {
             actions={
               <>
                 <Button
-                  variant="secondary"
+                  variant="outline"
                   size="sm"
                   className="text-xs"
                   onClick={() => console.log("Add Transaction clicked")}
@@ -25,39 +33,27 @@ export function WalletsPage() {
                   variant="primary"
                   size="sm"
                   className="text-xs"
-                  onClick={() => console.log("Add Wallet clicked")}
+                  onClick={() => setAddOpen(true)}
                 >
                   <Plus className="h-4 w-4" />
-                  Add Wallet
+                  New Wallet
                 </Button>
               </>
             }
           />
-          <div className="grid grid-cols-2 gap-4">
-            <div className="p-0 border border-border/50 rounded-lg"> Summary </div>
-            <div className="p-0 border border-border/50 rounded-lg">
-              <div className="flex items-center justify-between">
-                <h2 className="text-base">Wallets by participation</h2>
-                <Button variant="ghost" size="sm" className="text-xs">
-                  <Ellipsis className="h-4 w-4" />
-                </Button>
-              </div>
-              <div className="mt-2">
-                <p className="text-sm text-foreground-muted">
-                  This section shows the distribution of wallets based on their participation in various activities.
-                </p>
-              </div>
-            </div>
-
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <SummaryWallets />
+            <AnalysisWallets />
           </div>
         </div>
-        <div className="flex flex-col gap-4 p-4 w-120 border border-border/50 rounded-lg">
-          <h2 className="text-lg font-semibold">All Wallets</h2>
-          {/* Wallets List */}
-        </div>
+        <ListWallets />
       </div>
-      <div className="p-4 w-full border border-border">Card Wallets: list of cards with search, filters</div>
-      <div className="p-4 w-full border border-border">All Activities: table with pagination and filters</div>
+      <div className="p-4 w-full">
+        <CardsWallets />
+      </div>
+      {/* All Activities */}
+      <div className="p-4 w-full">All Activities: table with pagination and filters</div>
+      <AddWalletModal open={addOpen} onClose={() => setAddOpen(false)} />
     </div>
   );
 }

@@ -17,6 +17,7 @@ export const buttonVariants = cva(
           "bg-danger text-danger-foreground hover:bg-danger-hover focus-visible:ring-danger",
       },
       size: {
+        xs: "h-6 px-2 text-xs",
         sm: "h-8 px-3 text-sm",
         md: "h-10 px-4 text-sm",
         lg: "h-12 px-6 text-base",
@@ -46,6 +47,7 @@ export const iconButtonVariants = cva(
           "bg-danger text-danger-foreground hover:bg-danger-hover focus-visible:ring-danger",
       },
       size: {
+        xs: "h-6 w-6",
         sm: "h-8 w-8",
         md: "h-10 w-10",
         lg: "h-12 w-12",

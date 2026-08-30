@@ -9,7 +9,7 @@ export function AppLayout() {
       <AppHeader />
       <main className="flex-1 min-w-0 p-0 pt-16">
         <AppSidebar />
-        <div className="px-2 md:ml-19 md:p-0 border border-border">
+        <div className="px-2 md:ml-19 md:p-0">
           <Outlet />
           <AppFooter />
         </div>

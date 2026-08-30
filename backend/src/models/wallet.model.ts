@@ -1,6 +1,6 @@
 import mongoose, { Schema, type Document, type Model } from "mongoose";
 
-export type WalletType = "exchange" | "personal" | "hardware" | "other";
+export type WalletType = "exchange" | "crypto" | "microwallet" | "hardware" | "banking" | "other";
 export type WalletStatus = "active" | "inactive" | "archived";
 
 export interface IWallet extends Document {
@@ -18,7 +18,11 @@ const walletSchema = new Schema<IWallet>(
   {
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     name: { type: String, required: true, trim: true, maxlength: 80 },
-    type: { type: String, required: true, enum: ["exchange", "personal", "hardware", "other"] },
+    type: {
+      type: String,
+      required: true,
+      enum: ["exchange", "crypto", "microwallet", "hardware", "banking", "other"],
+    },
     status: {
       type: String,
       required: true,

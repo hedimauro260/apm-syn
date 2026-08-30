@@ -11,15 +11,43 @@ import { ActivitiesPage } from "@/pages/activities-page";
 import { UiPlaygroundPage } from "@/pages/ui-playground-page";
 import { WalletsPage } from "@/pages/wallets-page";
 import { WebsitesPage } from "@/pages/websites-page";
+import { SignInPage } from "@/pages/sign-in-page";
+import { SignUpPage } from "@/pages/sign-up-page";
+import { ProtectedRoute } from "@/components/auth/protected-route";
+import { PublicRoute } from "@/components/auth/public-route";
 
 export const router = createBrowserRouter([
   {
     path: "/",
-    element: <HomePage />,
+    element: (
+      <PublicRoute>
+        <HomePage />
+      </PublicRoute>
+    ),
+  },
+  {
+    path: "/sign-in",
+    element: (
+      <PublicRoute>
+        <SignInPage />
+      </PublicRoute>
+    ),
+  },
+  {
+    path: "/sign-up",
+    element: (
+      <PublicRoute>
+        <SignUpPage />
+      </PublicRoute>
+    ),
   },
   {
     path: "/app",
-    element: <AppLayout />,
+    element: (
+      <ProtectedRoute>
+        <AppLayout />
+      </ProtectedRoute>
+    ),
     children: [
       {
         index: true,

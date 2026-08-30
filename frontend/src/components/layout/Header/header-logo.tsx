@@ -11,7 +11,7 @@ export function HeaderLogo() {
                     APM Syn
                 </span>
                 <span className="text-[10px] text-foreground-muted leading-tight">
-                    Asset Portfolio Manager
+                    Asset Portfolio Manager Sync
                 </span>
             </div>
         </div>

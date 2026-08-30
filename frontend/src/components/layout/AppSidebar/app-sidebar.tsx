@@ -17,6 +17,7 @@ import {
   TooltipPortal,
 } from "@/components/ui/custom-tooltip";
 import { cn } from "@/lib/utils";
+import { useClerk } from "@clerk/clerk-react";
 
 export function AppSidebar() {
   const location = useLocation();
@@ -38,6 +39,8 @@ export function AppSidebar() {
   const toggleTheme = () => {
     setIsDark(!isDark);
   };
+
+  const clerk = useClerk();
 
   const allNavItems = navigationSections.flatMap((section) => section.items);
 
@@ -152,7 +155,10 @@ export function AppSidebar() {
               {/* Logout */}
               <TooltipRoot>
                 <TooltipTrigger asChild>
-                  <button className="p-0 rounded-lg hover:bg-destructive/10 transition-colors group">
+                  <button
+                    onClick={() => clerk.signOut()}
+                    className="p-0 rounded-lg hover:bg-destructive/10 transition-colors group"
+                  >
                     <LogOut className="text-foreground-muted group-hover:text-destructive transition-colors" />
                   </button>
                 </TooltipTrigger>

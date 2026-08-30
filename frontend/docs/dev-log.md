@@ -761,7 +761,7 @@ Os componentes foram desenhados para aceitar diretamente:
 
 ```tsx
 const { register } = useForm();
-<Input {...register("name")} aria-invalid={!!errors.name} />
+<Input {...register("name")} aria-invalid={!!errors.name} />;
 ```
 
 Sem necessidade de wrappers ou adaptações.
@@ -1096,8 +1096,15 @@ API:
 
 ```tsx
 if (isLoading) return <LoadingState>Loading wallets...</LoadingState>;
-if (isError) return <ErrorState title="Error" action={<Button onClick={refetch}>Try again</Button>} />;
-if (data.length === 0) return <EmptyState title="No data" action={<Button>Create</Button>} />;
+if (isError)
+  return (
+    <ErrorState
+      title="Error"
+      action={<Button onClick={refetch}>Try again</Button>}
+    />
+  );
+if (data.length === 0)
+  return <EmptyState title="No data" action={<Button>Create</Button>} />;
 return <DataList data={data} />;
 ```
 
@@ -1467,171 +1474,1114 @@ Tipo exportado: `NavigationItem { label, to, icon }`
 
 ---
 
-## 2026-08-25 — Fase 1.3 Bloco 4B: Sidebar Desktop Completa
+## 2026-08-25 — Componentes de Layout: AppHeader, AppSidebar e AppFooter
 
 **Fase:** 1 — Design System e Layout Base
 
-**Descrição:** Implementação completa da Sidebar desktop com expand/collapse, 3 seções, brand, navigation, footer com theme toggle e portfolio overview.
+**Descrição:** Implementação/evolução dos componentes estruturais de layout do App Shell: sidebar de ícones com tooltips e troca de tema, header fixo com navegação, dropdown de perfil/notificações, menu mobile e footer.
+
+**Arquivos analisados:**
+
+```text
+frontend/src/components/layout/AppSidebar/app-sidebar.tsx
+frontend/src/components/layout/Header/app-header.tsx
+frontend/src/components/layout/Footer/app-footer.tsx
+```
+
+### AppSidebar
+
+Sidebar compacta (rail de ícones, `w-16`) fixada à esquerda, com navegação agrupada via `navigationSections`:
+
+```text
+- aside fixo (fixed) abaixo do header (top-16), h-[calc(100vh-4rem)]
+- Topo: ícones fixos (CalendarCheck, WalletMinimal) com Tooltip
+- Centro: itens de navegação via allNavItems = navigationSections.flatMap(section => section.items)
+- Link usa useLocation para detectar rota ativa (location.pathname === item.to)
+- Estado ativo: text-foreground bg-foreground/5 + indicador (barra primary -right-2)
+- Tooltips (TooltipProvider/Root/Trigger/Portal/Content) laterais (side="right")
+- Bottomo: Theme Switcher (Sun/Moon) + Logout (LogOut)
+- Theme switch: estado isDark em localStorage + classe dark/light no <html>
+```
+
+Principais pontos:
+
+- **Theme toggle** — `isDark` inicializado de `localStorage.theme` ou `prefers-color-scheme`; `useEffect` aplica `dark`/`light` em `document.documentElement` e persiste no `localStorage`.
+- **Ícones Sun/Moon** — overlay com cross-fade/rotação (`opacity` + `rotate` + `scale`) na troca de tema.
+- **Tooltips** — cada ícone de navegação e ação expõe tooltip lateral com atalho (`⌘`) e label.
+
+### AppHeader
+
+Header fixo (`fixed top-0 z-50 h-16`) com fundo translúcido e backdrop-blur ao rolar (`useScroll(0)`):
+
+```text
+- Left: HeaderLogo
+- Mobile: bloco de Total Balance ($15.000,00) + botão Menu (IconButton) que abre overlay
+- Desktop (md+): HeaderNav (Overview, Portfolio, Websites, Wallets, Transactions) +
+  Backup (CloudDownload) + NotificationDropdown + separador + ProfileDropdown
+- Scrolled: bg-surface/80 backdrop-blur-md border-b shadow-sm
+```
+
+Principais pontos:
+
+- **Menu mobile** — overlay full-screen com animação de entrada (`translate-x-full` → `translate-x-0`) via `requestAnimationFrame` + `mounted`/`shouldAnimateIn`; `useEffect` fecha ao mudar de rota (`location.pathname`).
+- **HeaderNav** — extrai itens específicos de `navigationSections` para exibir no header desktop.
+- **Dropdowns** — `NotificationDropdown` e `ProfileDropdown` compostos em componentes próprios.
+
+### AppFooter
+
+Footer simples com créditos e links:
+
+```text
+- Ano dinâmico (new Date().getFullYear())
+- Texto "Made with <Heart> by Kubo Labs"
+- Links: About (/about), Terms (/terms), Support (/support) via <a>
+- Layout responsivo (coluna no mobile, linha no md+)
+```
+
+---
+
+## 2026-08-30 — Fase 5A: Frontend conversando com Backend (Wallets)
+
+**Fase:** 5 — Wallets (fundação)
+
+**Descrição:** Criação da estrutura da feature Wallets e da camada de dados, sem UI da lista (cards, tabela, modal, formulário visual, holdings, skeletons, toasts — tudo isso fica para depois). O frontend passa a saber conversar com o backend de Wallets de forma tipada e com separação de camadas.
 
 **Arquivos criados:**
 
 ```text
-src/lib/theme.ts                                (setTheme/getTheme compartilhado)
-src/pages/settings-page.tsx                     (placeholder)
-src/components/layout/AppSidebar/sidebar-brand.tsx        (logo + collapse button)
-src/components/layout/AppSidebar/sidebar-navigation.tsx   (sections + NavLinks)
-src/components/layout/AppSidebar/sidebar-footer.tsx       (theme toggle + PWA + portfolio)
-src/components/layout/AppSidebar/portfolio-overview.tsx   (card visual)
+frontend/src/features/wallets/
+├── api/
+│   ├── wallet-api.ts            (camada HTTP pura)
+│   └── wallet-queries.ts        (TanStack Query + query keys + invalidação)
+├── types/
+│   └── wallet.types.ts          (tipos do dominio)
+└── schemas/
+    └── wallet.schema.ts         (schemas Zod — validacao UX)
+```
+
+**Arquivos removidos (stubs vazios obsoletos, 0 bytes e sem importacoes):**
+
+```text
+frontend/src/api/wallet-api.ts        (estava vazio)
+frontend/src/api/wallet-queries.ts    (estava vazio; diretório src/api removido)
+frontend/src/schemas/wallet.schema.ts (estava vazio)
+```
+
+Esses stubs viviam em localizacoes alternativas (`src/api/`, `src/schemas/`) e foram substituidos pela estrutura `src/features/wallets/...` conforme definido em `ToDo.md`.
+
+---
+
+### 1. `types/wallet.types.ts`
+
+Tipos do dominio Wallet, refletindo o contrato HTTP **real** do backend (arquivo `backend/src/services/wallet.service.ts`, funcao `toWalletResponse`), nao uma versao inventada:
+
+```text
+WalletStatus = "active" | "inactive" | "archived"
+WalletType   = "exchange" | "crypto" | "microwallet" | "hardware" | "banking" | "other"
+
+Wallet {
+  id: string           // backend expoe String(_id) -> frontend nao conhece _id
+  userId: string
+  name: string
+  type: WalletType
+  status: WalletStatus
+  color?: string
+  description?: string
+  createdAt: string     // ISO
+  updatedAt: string     // ISO
+}
+
+CreateWalletInput  { name, type, color?, description? }
+UpdateWalletInput  { name?, type?, color?, description? }   // todos opcionais (PATCH parcial)
+WalletListParams   { page?, limit?, sort?, status?, type? }
+```
+
+Conforme a decisao arquitetural: **MongoDB usa `_id`, mas o contrato HTTP expoe `id`** (o service faz `id: String(_id)` e descarta `__v`). O frontend só conhece `id`.
+
+Observacao sobre `balances`: o `GET /wallets/:id` **pode** incluir `balances` (dado derivado). Foi intencionalmente **omitido** do tipo `Wallet` base neste momento, pois holdings/operacoes financeiras sao Fase 6+. Todas as rotas da 5A (create/list/update/activate/deactivate/archive/delete) retornam apenas os campos base via `toWalletResponse`.
+
+### 2. `schemas/wallet.schema.ts`
+
+Schemas Zod para validacao de entrada (UX). O backend continua sendo a autoridade; o frontend valida apenas o que melhora a experiencia:
+
+```text
+createWalletSchema   -> CreateWalletFormData   (name: trim, min 1, max 80; type: enum; color?, description?)
+updateWalletSchema   -> UpdateWalletFormData   (campos opcionais + refine "pelo menos um campo")
+walletListQuerySchema-> WalletListQuery         (page/limit coerce number + defaults; status/type enum)
+```
+
+Fluxo futuro: React Hook Form → Zod → `CreateWalletInput` → `wallet-api`.
+
+### 3. `api/wallet-api.ts`
+
+Camada HTTP **pura**. Nao contem React, useQuery, useMutation, componentes ou estado visual. Recebe o token do chamador e delega ao `apiClient` centralizado.
+
+```text
+getWallets(token, params?)       GET  /wallets[?...])            -> PaginatedResponse<Wallet>
+getWallet(token, id)             GET  /wallets/:id                 -> Wallet
+createWallet(token, body)        POST /wallets                     -> Wallet
+updateWallet(token, id, body)    PATCH /wallets/:id                -> Wallet
+archiveWallet(token, id)         POST /wallets/:id/archive         -> Wallet
+activateWallet(token, id)        POST /wallets/:id/activate        -> Wallet
+deactivateWallet(token, id)       POST /wallets/:id/deactivate        -> Wallet
+deleteWallet(token, id)          DELETE /wallets/:id               -> void (204)
+```
+
+Decisao de contrato (validada contra o backend):
+
+- Recursos individuais vêm envoltos em `{ data: Wallet }` → a camada `wallet-api` **desempacota** `data` e devolve o dominio `Wallet` diretamente.
+- A listagem vem como `{ data: Wallet[], pagination: { page, limit, total, totalPages } }` → retornado direto como `PaginatedResponse<Wallet>` (sem desempacotar `data`).
+- DELETE retorna `204 No Content` → `apiClient` devolve `undefined` e a funcao resolve `void`.
+
+### 4. `api/wallet-queries.ts`
+
+TanStack Query + query keys padronizadas + invalidacao. Usa Clerk `useAuth().getToken()` para obter o session token e o repassa a `wallet-api`.
+
+```text
+walletKeys = {
+  all:    ["wallets"],                              // prefixo para invalidacao em massa
+  list:   (params?) => ["wallets", "list", params],  // lista (com params para paginacao/filtro)
+  detail: (id)       => ["wallets", "detail", id],   // detalhe de uma wallet
+}
+
+useWalletsQuery(params?)          -> GET  lista
+useWalletQuery(walletId)          -> GET  detalhe (enabled: !!walletId)
+useCreateWalletMutation()         -> POST  -> invalida ["wallets"]
+useUpdateWalletMutation()         -> PATCH -> invalida ["wallets","detail",id] + ["wallets"]
+useArchiveWalletMutation()        -> POST  -> invalida ["wallets","detail",id] + ["wallets"]
+useActivateWalletMutation()       -> POST  -> invalida ["wallets","detail",id] + ["wallets"]
+useDeactivateWalletMutation()     -> POST  -> invalida ["wallets","detail",id] + ["wallets"]
+useDeleteWalletMutation()         -> DELETE-> invalida ["wallets"]
+```
+
+Fonteira de responsabilidade (conforme ToDo):
+
+```text
+UI / componentes
+  ↓ nao conhecem URLs, headers, fetch ou auth HTTP
+Hooks (useAuth -> getToken)
+  ↓
+TanStack Query  (wallet-queries)
+  ↓
+wallet-api      (HTTP puro -> apiClient)
+  ↓
+apiClient       (Authorization: Bearer token)
+  ↓
+Backend APM SYN  (GET/POST/PATCH/DELETE /api/v1/wallets[...])
+```
+
+### Divergencia encontrada / Decisao importante (reportada, nao "consertada" no backend)
+
+`frontend/.env` define `VITE_API_URL=http://localhost:3000/api/v1` — **inclui o prefixo `/api/v1`**. Como `apiClient` monta `${env.apiUrl}${path}`, os paths da `wallet-api` foram definidos **sem** o prefixo (`/wallets`, `/wallets/:id`, ...), resultando na URL final correta `http://localhost:3000/api/v1/wallets`.
+
+Se os paths incluissem `/api/v1/wallets`, a URL ficaria `http://localhost:3000/api/v1/api/v1/wallets` (duplicado) — roteamento 404. A regra estabelecida: **paths da wallet-api sao relativos a `env.apiUrl`; como `env.apiUrl` ja carrega `/api/v1`, nao se repete o prefixo.** Nenhuma modificacao foi feita no backend para isso (tratado no cliente, onde era devido).
+
+### Observacoes de arquitetura respeitadas
+
+- Separacao `wallet-api` (HTTP) x `wallet-queries` (TanStack/React) x componentes (UI).
+- Nenhuma lógica HTTP espalhada pela UI.
+- Tipos refletem o contrato real do backend, incluindo `userId` retornado por `toWalletResponse`.
+- Schemas frontend alinhados aos limites do backend (UX validation), sem duplicar regras de negocio/confianca.
+
+### O que NÃO foi feito (reservado para as proximas etapas)
+
+```text
+- UI da lista (tabela/cards)
+- modal / formulario visual
+- pagina de detalhes
+- holdings / balances derivados (Fase 6)
+- operacoes financeiras (deposits/withdrawals/adjustments — Fase 6)
+- skeletons/toasts especificos de Wallet
+```
+
+### Validação
+
+```text
+npm run typecheck  → ✅ sucesso (0 erros)
+npm run lint       → ✅ 0 warnings / 0 errors em arquivos novos
+                     (2 warnings pre-existentes em src/components/layout/Header/app-header.tsx — fora de escopo)
+npm run build      → ✅ sucesso (tsc -b && vite build)
+```
+
+### Checklist Fase 5A
+
+```text
+[ x ] Estrutura da feature criada (features/wallets/{api,types,schemas})
+[ x ] Tipos Wallet definidos
+[ x ] WalletStatus definido
+[ x ] WalletType definido
+[ x ] Inputs definidos (CreateWalletInput, UpdateWalletInput, WalletListParams)
+[ x ] Schemas Zod definidos (create/update/list-query)
+[ x ] wallet-api criado
+[ x ] CRUD conectado ao apiClient (getWallets, getWallet, createWallet, updateWallet, deleteWallet)
+[ x ] Status transitions conectados (archive/activate/deactivate)
+[ x ] Queries TanStack Query criadas
+[ x ] Mutations criadas
+[ x ] Query keys padronizadas (["wallets"], ["wallets","list",params], ["wallets","detail",id])
+[ x ] Invalidação configurada (all como prefixo; detail(id) para mutations)
+[ x ] Sem lógica HTTP espalhada pela UI
+[ x ] typecheck ✓  lint ✓  build ✓
+```
+
+---
+
+## 2026-08-30 — Fase 5B-Step1: Summary Wallets (PageHeader + Summary + GET /transactions)
+
+**Fase:** 5 — Wallets (UI por Sections)
+
+**Descrição:** Implementação do primeiro bloco da Wallets page — `Summary` dentro da section superior (mesmo container do `PageHeader` e `Analysis` + `All Wallets List`). O `Summary` exibe 4 cards (Total Balance, Total Inflows, Total Outflows, Total Transactions) com dados reais vindos da API via `GET /transactions`, sem saldo inventado, com LoadingState cobrindo todo o bloco e tratamento de erro com retry. Componente importado em `wallets-page.tsx` substituindo o placeholder.
+
+**Arquivos criados:**
+
+```text
+frontend/src/features/transactions/types/transaction.types.ts   (tipos do domínio Transaction)
+frontend/src/features/transactions/api/transaction-api.ts       (camada HTTP pura)
+frontend/src/features/transactions/api/transaction-queries.ts   (TanStack Query + query keys)
 ```
 
 **Arquivos modificados:**
 
 ```text
-src/config/navigation.ts                       (navigationItems → navigationSections)
-src/components/layout/AppSidebar/app-sidebar.tsx  (rewritten with state + sub-components)
-src/components/layout/app-layout.tsx           (h-dvh, overflow-hidden)
-src/app/router/index.tsx                       (added /app/settings route)
+frontend/src/pages/Wallets/summary-wallets.tsx   (implementado — 4 cards + integração real)
+frontend/src/pages/wallets-page.tsx              (import SummaryWallets, substitui placeholder)
 ```
 
-### navigation.ts → navigationSections
+---
+
+### 1. `features/transactions/types/transaction.types.ts`
+
+Tipos espelhando o contrato real do backend (`backend/src/services/transaction.service.ts:16` `toResponse`, `backend/src/models/transaction.model.ts:3`):
 
 ```text
-Main
-├── Dashboard    → /app/dashboard     → LayoutDashboard
-└── Portfolio    → /app/portfolio     → ChartNoAxesCombined
+TransactionType = "WALLET_DEPOSIT" | "WALLET_WITHDRAWAL" | "WALLET_TRANSFER" | "WALLET_ADJUSTMENT" | "WEBSITE_EARNING" | "WEBSITE_WITHDRAWAL"
+ParticipantType = "WALLET" | "WEBSITE" | "EXTERNAL"
 
-Manage
-├── Websites     → /app/websites      → Globe
-├── Wallets      → /app/wallets       → WalletCards
-├── Transactions → /app/transactions  → ArrowLeftRight
-└── Goals        → /app/goals         → Target
+Transaction {
+  id: string
+  userId: string
+  type: TransactionType
+  source: { type: ParticipantType; id?: string }
+  destination: { type: ParticipantType; id?: string }
+  asset: { externalId, symbol, name }
+  quantity: number
+  usdValue: number
+  countsTowardGoal: boolean
+  date: string           // ISO
+  description?: string
+  createdAt: string
+  updatedAt: string
+}
 
-System
-└── Settings     → /app/settings      → Settings
+TransactionListParams { page?, limit?, sort?, type?, walletId?, websiteId?, asset?, from?, to?, countsTowardGoal? }
 ```
 
-### Estrutura da Sidebar
+Decisão: frontend conhece apenas `id` (String(_id)), nunca `_id`. `usdValue` é fonte para valores em USD.
+
+### 2. `features/transactions/api/transaction-api.ts`
+
+Camada HTTP pura, sem React. Recebe `token` do chamador e delega ao `apiClient`.
 
 ```text
-┌──────────────────────────────────────┐
-│                                      │
-│   ┌──── SidebarBrand ────────────┐   │
-│   │  ◉ APM SYN                   │──◉│ ← Collapse button (saliente)
-│   │    Asset Portfolio Manager    │   │
-│   └──────────────────────────────┘   │
-│                                      │
-│══════════════════════════════════════│
-│                                      │
-│  MAIN                                │
-│  ◉ Dashboard                         │
-│  ◉ Portfolio                         │
-│                                      │
-│  MANAGE                              │
-│  ◉ Websites                          │
-│  ◉ Wallets                           │
-│  ◉ Transactions                      │
-│  ◉ Goals                             │
-│                                      │
-│  SYSTEM                              │
-│  ◉ Settings                          │
-│                                      │
-│══════════════════════════════════════│
-│                                      │
-│  🌙/☀/⊙ Theme                        │
-│  ↓ Install app (placeholder)         │
-│                                      │
-│  ┌────────────────────────────────┐  │
-│  │ ◉ Portfolio: $12,450.00        │  │
-│  │         +8.42%                 │  │
-│  └────────────────────────────────┘  │
-│                                      │
-└──────────────────────────────────────┘
+getTransactions(token, params?)  GET /transactions[?...]  -> PaginatedResponse<Transaction>
+getTransaction(token, id)        GET /transactions/:id      -> Transaction
 ```
 
-### Comportamento Expandido/Recolhido
+Query builder suporta `page, limit, sort, type, walletId, websiteId, asset, from, to, countsTowardGoal`. Paths relativos a `env.apiUrl` (que já contém `/api/v1`), igual a `wallet-api.ts:25`.
+
+### 3. `features/transactions/api/transaction-queries.ts`
+
+TanStack Query + chaves padronizadas:
 
 ```text
-Expandido:  w-64 (256px)
-Recolhido:  w-[72px]
-Transição:  200ms ease-in-out (transition-[width])
+transactionKeys = {
+  all: ["transactions"],
+  list: (params?) => ["transactions","list",params],
+  detail: (id) => ["transactions","detail",id],
+}
+
+useTransactionsQuery(params?)  -> GET lista (queryKey list)
+useTransactionQuery(id)        -> GET detalhe (enabled: !!id)
 ```
 
-- **Desktop (≥1024px):** inicia expandido
-- **Tablet (768-1023px):** inicia recolhido
-- **Resize:** tablet → recolhido, desktop → expandido
-- **Mobile (<768px):** Sidebar não aparece (app-layout esconde)
+`getAuthToken()` via `useAuth().getToken()` — lança se sem sessão (capturado por `isError`). Nenhum `fetch` espalhado na UI.
 
-### SidebarBrand
+### 4. `pages/Wallets/summary-wallets.tsx`
 
-- Ícone: `Workflow` do Lucide (representa sincronização)
-- Wordmark: "APM SYN" (bold) + subtitle "Asset Portfolio Manager"
-- Collapsed: apenas ícone
-- **Botão collapse:** `position: absolute`, `right: -12px`, circular, `bg-primary`, `z-10`
-  - Expandido: `PanelLeftClose`
-  - Recolhido: `PanelLeftOpen`
-  - `aria-label` + `title`
-
-### SidebarNavigation
-
-- Seções com títulos: MAIN, MANAGE, SYSTEM
-- Collapsed: títulos escondidos, separadores visuais entre seções
-- NavLink com `isActive` → `bg-white/14 text-white`
-- Hover → `bg-white/8 text-white`
-- Default → `text-white/70`
-- `title` attribute no collapsed para tooltip nativo
-
-### SidebarFooter
-
-- **ThemeToggle:** ciclo Dark → Light → System, ícone muda (Moon/Sun/Monitor)
-- **PWA Install:** placeholder desabilitado
-- **PortfolioOverview:** card visual com valor + change
-
-### PortfolioOverview
-
-- Expandido: valor + percentual
-- Recolhido: ícone WalletCards + TrendingUp/TrendingDown
-- Dados: placeholder (não conectado à API)
-
-### Sidebar Visual
-
-- Background: `bg-primary` (constante em Dark/Light)
-- Bordas entre seções: `border-white/10`
-- Transparências: `white/8`, `white/14`, `white/40`, `white/50`, `white/70`
-- Tokens: via CSS custom properties (--color-primary)
-
-### Checklist 4B
+Componente `SummaryWallets` — presentational + data via hooks (sem HTTP direto):
 
 ```text
-[ x ] navigationSections (3 grupos: Main, Manage, System)
-[ x ] Settings adicionado
-[ x ] SettingsPage criada
-[ x ] Router atualizado (/app/settings)
-[ x ] SidebarBrand com logo (Workflow icon)
-[ x ] SidebarBrand collapse button (saliente, circular)
-[ x ] SidebarNavigation com seções
-[ x ] SidebarNavigation NavLink com isActive
-[ x ] SidebarFooter com ThemeToggle (Dark/Light/System)
-[ x ] SidebarFooter com PWA placeholder
-[ x ] SidebarFooter com PortfolioOverview
-[ x ] PortfolioOverview visual (expandido + recolhido)
-[ x ] PortfolioOverview recolhido = wallet icon
-[ x ] Estado expandido/recolhido (useState + media query)
-[ x ] Desktop inicia expandido (≥1024px)
-[ x ] Tablet inicia recolhido (768-1023px)
-[ x ] Resize tratado (resize listener)
-[ x ] Transição 200ms width
-[ x ] Active state (bg-white/14)
-[ x ] Hover state (bg-white/8)
-[ x ] Focus-visible no botão collapse
-[ x ] aria-labels
-[ x ] Labels ocultos no collapsed
-[ x ] Sidebar bg-primary (Dark/Light consistente)
+- useWalletsQuery({ limit: 100 })           -> walletCount = pagination.total
+- useTransactionsQuery({ limit: 100, sort: "-date" }) -> transactions + pagination.total
+```
 
+Cálculos (sem saldo inventado):
+
+```text
+totalInflows  = sum(tx.usdValue) onde destination.type === "WALLET"
+totalOutflows = sum(tx.usdValue) onde source.type === "WALLET"
+balance       = totalInflows - totalOutflows
+totalTransactions = pagination.total (ou data.length fallback)
+
+This week (weekStartsOn: 1, segunda):
+  weekStart = startOfWeek(now, {weekStartsOn:1})
+  weekly = transactions filtradas por isWithinInterval(parseISO(tx.date), {start: weekStart, end: now})
+  weeklyInflows / weeklyOutflows / weeklyCount idem
+```
+
+Formatação USD: `Intl.NumberFormat("en-US", {style:"currency", currency:"USD"})` → `$0.00`.
+
+UI dos cards (4):
+
+```text
+grid grid-cols-2 gap-3
+  Card {
+    cima:  ícone (h-8 w-8 rounded-lg bg-surface-elevated border) + label (text-xs text-foreground-muted) + value (text-xl font-semibold tabular-nums)
+    baixo: border-t border-border-subtle + secondaryText (text-xs text-foreground-secondary)
+  }
+
+1. Total Balance     → Wallet        → value: formatUSD(balance)           → secondary: "Across N wallets"
+2. Total Inflows     → TrendingUp    → value: formatUSD(totalInflows)      → secondary: "$X\nThis week"
+3. Total Outflows    → TrendingDown  → value: formatUSD(totalOutflows)     → secondary: "$X\nThis week"
+4. Total Transactions→ Receipt       → value: String(totalTransactions)     → secondary: "N this week"
+```
+
+Tokens: `border-border`, `bg-surface`, `bg-surface-elevated`, `text-foreground*` — suporta dark/light/system (`index.css:42`). Ícones `lucide-react`. `tabular-nums` para números.
+
+Estados:
+
+```text
+isLoading (wallets || transactions) → <div rounded-xl border bg-surface><LoadingState>Loading summary...</LoadingState></div>
+isError   (wallets || transactions) → <ErrorState title="Unable to load summary" action={<Button onClick={refetch}>Try again</Button>} />
+```
+
+Limitação documentada: `paginate` backend limita a `100` (`backend/src/shared/utils/pagination.ts:21`). Agregações all-time usam apenas primeira página (100 recentes). Para >100 txs, totais ficam truncados — requer endpoint de agregação backend futuro. Já `totalTransactions` usa `pagination.total` (correto) e dados semanais vêm da primeira página (suficiente pois semana está nos recentes).
+
+### 5. `pages/wallets-page.tsx:1-39`
+
+```text
+- import { SummaryWallets } from "./Wallets/summary-wallets"
+- substitui placeholder <div> Summary </div> por <SummaryWallets />
+- mantém grid grid-cols-2 gap-4 (Summary + Analysis) dentro de flex-1 p-4
+- All Wallets List continua w-120 ao lado
+```
+
+Sem lógica HTTP na UI — `wallets-page.tsx` apenas compõe; dados vêm dos hooks dentro de `SummaryWallets`.
+
+### Validação
+
+```text
+npm run typecheck → ✅ sucesso
+npm run lint      → ✅ 0 errors, 2 warnings pre-existentes em app-header.tsx (fora de escopo)
+npm run build     → ✅ sucesso (643 kB, tsc -b && vite build)
+```
+
+### Checklist Fase 5B-Step1
+
+```text
+[ x ] /app/wallets não é mais placeholder puro (Summary real)
+[ x ] SummaryWallets implementado com 4 cards
+[ x ] Total Balance (Across N wallets, $ USD)
+[ x ] Total Inflows ($ total + $ This week)
+[ x ] Total Outflows ($ total + $ This week)
+[ x ] Total Transactions (count + N this week)
+[ x ] Wallets reais carregadas via useWalletsQuery
+[ x ] Transactions reais via GET /transactions (useTransactionsQuery)
+[ x ] LoadingState cobrindo Summary todo
+[ x ] ErrorState com Retry (refetch ambas queries)
+[ x ] Sem saldo financeiro inventado (cálculo via usdValue real)
+[ x ] Sem lógica HTTP na UI (apiClient apenas em transaction-api)
+[ x ] Formatação $ 0.00 USD (Intl.NumberFormat en-US)
+[ x ] Ícones definidos (Wallet, TrendingUp, TrendingDown, Receipt)
+[ x ] Dark mode ✓ (tokens bg-surface/border)
+[ x ] Light mode ✓
+[ x ] Responsive (grid-cols-2 interno, grid-cols-2 pai)
+[ x ] typecheck ✓  lint ✓  build ✓
+```
+
+Próximos passos (fora deste step): Analysis (Wallets by participation), All Wallets List lateral, Cards com filtros/sort, All Activities com paginação.
+
+---
+
+## 2026-08-30 — Fase 2.1: Autenticação Frontend com Clerk (@clerk/clerk-react v5.61.9)
+
+**Fase:** 2 — Autenticação e Proteção de Rotas
+
+**Descrição:** Implementação da etapa de autenticação do frontend utilizando o SDK Clerk já instalado (`@clerk/clerk-react@5.61.9`). Criadas páginas nativas de sign-in e sign-up, proteção de rotas `/app/*` para usuários não autenticados e redirecionamento de usuários autenticados para `/app/overview`. Removidos mocks do `ProfileDropdown` e `AppSidebar`, substituídos por dados e ações reais do Clerk.
+
+**Arquivos criados:**
+
+```text
+frontend/src/pages/sign-in-page.tsx
+frontend/src/pages/sign-up-page.tsx
+frontend/src/components/auth/protected-route.tsx
+frontend/src/components/auth/public-route.tsx
+```
+
+**Arquivos modificados:**
+
+```text
+frontend/src/app/router/index.tsx
+frontend/src/components/layout/Header/profile-dropdown.tsx
+frontend/src/components/layout/AppSidebar/app-sidebar.tsx
+```
+
+### Versão do Clerk instalada
+
+```text
+@clerk/clerk-react: 5.61.9
+```
+
+Componentes e hooks utilizados (API compatível com v5):
+
+```text
+- <SignIn />            página completa de autenticação (embarcada)
+- <SignUp />            página completa de cadastro (embarcada)
+- useAuth()             { isLoaded, isSignedIn, userId, sessionId, getToken }
+- useUser()             dados do usuário autenticado
+- useClerk()            instância do clerk para signOut()
+```
+
+### 1. Páginas de Autenticação
+
+**`sign-in-page.tsx`** — wrapper mínimo em torno do componente `<SignIn />` do Clerk:
+
+```tsx
+import { SignIn } from "@clerk/clerk-react";
+
+export function SignInPage() {
+  return <SignIn />;
+}
+```
+
+**`sign-up-page.tsx`** — wrapper mínimo em torno do componente `<SignUp />` do Clerk:
+
+```tsx
+import { SignUp } from "@clerk/clerk-react";
+
+export function SignUpPage() {
+  return <SignUp />;
+}
+```
+
+Ambas as páginas são servidas em `/sign-in` e `/sign-up` respectivamente, usando a UI gerenciada pelo Clerk (sem formulários customizados).
+
+### 2. Route Guards
+
+**`ProtectedRoute`** — protege rotas que exigem autenticação:
+
+```tsx
+export function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { isLoaded, isSignedIn } = useAuth();
+
+  if (!isLoaded) {
+    return <LoadingState>Loading...</LoadingState>;
+  }
+
+  if (!isSignedIn) {
+    return <Navigate to="/sign-in" replace />;
+  }
+
+  return children;
+}
+```
+
+**`PublicRoute`** — redireciona usuários já autenticados para `/app/overview`:
+
+```tsx
+export function PublicRoute({ children }: { children: React.ReactNode }) {
+  const { isLoaded, isSignedIn } = useAuth();
+
+  if (!isLoaded) {
+    return <LoadingState>Loading...</LoadingState>;
+  }
+
+  if (isSignedIn) {
+    return <Navigate to="/app/overview" replace />;
+  }
+
+  return children;
+}
+```
+
+### 3. Router
+
+Rotas atualizadas em `src/app/router/index.tsx`:
+
+```text
+/          → PublicRoute > HomePage
+/sign-in   → PublicRoute > SignInPage
+/sign-up   → PublicRoute > SignUpPage
+/app       → ProtectedRoute > AppLayout
+  ├── /app/overview
+  ├── /app/wallets
+  ├── /app/activities
+  ├── /app/websites
+  ├── /app/goals
+  ├── /app/portfolio
+  ├── /app/settings
+  └── /app/ui
+*          → NotFoundPage (404)
+```
+
+### 4. ProfileDropdown (remoção de mock)
+
+`ProfileDropdown` atualizado para consumir dados reais do Clerk via `useUser()`:
+
+```tsx
+const { user } = useUser();
+
+const userName = user?.fullName || user?.firstName || "User";
+const userEmail = user?.primaryEmailAddress?.emailAddress || "";
+const userInitials = userName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase() || "U";
+```
+
+O item "Logout" agora executa `clerk.signOut()` via `useClerk()` ao invés de um link morto (`href: "#logout"`).
+
+### 5. AppSidebar (remoção de mock)
+
+Botão de logout na sidebar conectado ao Clerk:
+
+```tsx
+const clerk = useClerk();
+
+<button onClick={() => clerk.signOut()}>
+  <LogOut />
+</button>
+```
+
+### Decisões Arquiteturais
+
+- **Não criada autenticação própria** — utilizada exclusivamente a API do `@clerk/clerk-react`.
+- **Sem mocks** — `ProfileDropdown` e `AppSidebar` agora usam dados/actions reais.
+- **ClerkProvider não alterado** — mantida a configuração existente (`publishableKey={env.clerkPublishableKey}`).
+- **Redirecionamento centralizado** — `PublicRoute` e `ProtectedRoute` garantem fluxo correto sem lógica espalhada.
+- **Loading states** — `LoadingState` do Design System exibido enquanto `isLoaded` é false.
+
+### Fluxo de autenticação
+
+```text
+Usuário acessa /app/*
+    ↓
+ProtectedRoute (useAuth)
+    ↓
+isLoaded = false → LoadingState
+    ↓
+isLoaded = true, isSignedIn = false → Navigate /sign-in
+    ↓
+isLoaded = true, isSignedIn = true → renderiza AppLayout
+```
+
+```text
+Usuário acessa /sign-in (já autenticado)
+    ↓
+PublicRoute (useAuth)
+    ↓
+isLoaded = false → LoadingState
+    ↓
+isLoaded = true, isSignedIn = true → Navigate /app/overview
+    ↓
+isLoaded = true, isSignedIn = false → renderiza SignInPage
+```
+
+### Validação
+
+```text
+npm run typecheck  → ✅ sucesso
+npm run lint       → ✅ 0 warnings, 0 errors
+npm run build      → ✅ sucesso
+```
+
+### Checklist Fase 2.1
+
+```text
+[ x ] @clerk/clerk-react v5.61.9 inspecionado
+[ x ] ClerkProvider preservado sem alterações
+[ x ] /sign-in criada (SignIn embarcado do Clerk)
+[ x ] /sign-up criada (SignUp embarcado do Clerk)
+[ x ] /app/* protegida para não autenticados
+[ x ] Redirecionamento de autenticados para /app/overview
+[ x ] PublicRoute implementado
+[ x ] ProtectedRoute implementado
+[ x ] ProfileDropdown sem mocks (useUser + useClerk)
+[ x ] AppSidebar logout conectado (useClerk.signOut)
+[ x ] Arquitetura existente preservada
+[ x ] Nenhuma autenticação própria criada
 [ x ] typecheck ✓
-[ x ] lint ✓ (0 warnings, 0 errors)
+[ x ] lint ✓
 [ x ] build ✓
 ```
 
 ---
 
-**Fase 1.3 — App Shell e Navegação — EM ANDAMENTO**
+## 2026-08-30 — Fase 5B-Step2: Analytics by Participation (Rosca + Recharts)
+
+**Fase:** 5 — Wallets (UI por Sections)
+
+**Descrição:** Implementação da section `Analytics` dentro da parte superior da Wallets page (mesmo container de `PageHeader` + `Summary`). O foco é `Analysis by participation`: gráfico de rosca (Recharts) com participação do saldo total de cada wallet, centro com ícone + label + valor total, tooltip por fatia (nome + saldo) e legenda em 3 colunas (dot cor + nome). Header com título dinâmico por variante, botão de três pontinhos (`Ellipsis`) que abre dropdown para outras análises (`by inflows`, `by outflows`, `by transactions`), cada uma com UI própria distinta (não rosca).
+
+**Dependências:**
+
+```text
+recharts@3.1.2 (+ es-toolkit, react-is) — gráfico rosca
+```
+
+Instalação via `npm install recharts@3.1.2 es-toolkit react-is --legacy-peer-deps` (React 19 requer legacy peer deps para recharts 3.x).
+
+**Arquivos criados/modificados:**
+
+```text
+frontend/package.json                          (added recharts, es-toolkit, react-is)
+frontend/src/pages/Wallets/analysis-wallets.tsx (implementado — rosca + variantes)
+frontend/src/pages/wallets-page.tsx            (import AnalysisWallets, substitui placeholder)
+```
+
+---
+
+### 1. `pages/Wallets/analysis-wallets.tsx`
+
+**Estrutura 3 partes exigidas:**
+
+```text
+cima:   header — AnalysisHeader (título + Ellipsis dropdown + descrição)
+meio:   gráfico — ParticipationChart (Recharts) ou listas específicas por variante
+baixo:  legenda — grid adaptativo (3 colunas, 2 se <3 wallets)
+```
+
+**Header (`AnalysisHeader`):**
+
+* `VARIANT_LABEL` e `VARIANT_DESC` por `Variant = "participation" | "inflows" | "outflows" | "transactions"`
+* `participation: "Analysis by participation" / "Distribution of total balance across your wallets."`
+* `inflows: "Analysis by inflows" / "Total inflows per wallet in the last 6 days (including today)."`
+* `outflows: "Analysis by outflows" / "Total outflows per wallet in the last 6 days (including today)."`
+* `transactions: "Analysis by transactions" / "Wallets ranked by transaction count (most to least)."`
+* Layout: `flex justify-between` + `Button ghost Ellipsis` + dropdown absoluto `w-52 border bg-surface shadow-md` com `useRef` + `mousedown` outside + `Escape` para fechar. Seleção atual com `text-primary bg-primary/5`.
+
+**Cálculo participação (sem saldo inventado):**
+
+```text
+wallets = useWalletsQuery({limit:100}).data
+transactions = useTransactionsQuery({limit:100, sort:"-date"}).data
+balances = Map<walletId,0>
+for tx in transactions:
+  if dest.type==="WALLET" && dest.id in map) balances[dest]+=usdValue
+  if src.type==="WALLET" && src.id in map) balances[src]-=usdValue
+totalBalance = sum(v>0) || fallback sum(all inflows - outflows) se todos <=0
+chartData = wallets.map((w,i)=>{value: max(0,balance), color: normalizeColor(w.color,i)}).filter(v>0).sort(desc)
+```
+
+* `normalizeColor(color,i)`: se `color` é hex válido (`/^#([0-9A-Fa-f]{3}){1,2}$/`) normaliza `toLowerCase().trim()`, senão fallback `FALLBACK_COLORS[i%10]` (`#3b82f6, #22c55e, #f59e0b, #ef4444, #8b5cf6, #06b6d4, #ec4899, #6366f1, #14b8a6, #f97316`).
+* `wallets`/`transactions` memoizados via `useMemo(() => data ?? [], [data])` para evitar re-render nos `useMemo` seguintes (lint exhaustive-deps corrigido).
+* Limitação: backend `paginate` limita a 100 (`backend/src/shared/utils/pagination.ts:21`), participação truncada acima de 100 txs — documentado igual ao Summary.
+
+**Gráfico rosca (`ParticipationChart`):**
+
+* `ResponsiveContainer 100% x 220-240px` + `PieChart` + `Pie dataKey="value" nameKey="name" innerRadius="62%" outerRadius="88%" paddingAngle={1} cornerRadius={4} stroke="var(--color-surface)"`
+* `Cell fill={color}` por wallet.
+* `Tooltip content={<CustomTooltip>}` custom: `div border bg-surface px-3 py-2 shadow-md` com nome + `formatUSD(value)`; usa `formatUSD` com `Intl.NumberFormat("en-US",{currency:"USD"})`.
+* Centro overlay absoluto `pointer-events-none flex flex-col items-center`: ícone `Wallet h-3.5` em `rounded-full bg-surface-elevated border`, label `Total Balance` (`text-[10px] text-foreground-muted`), valor `formatUSD(totalBalance)` (`text-sm font-semibold tabular-nums`).
+* Hover: fatia exibe tooltip com nome + saldo total na wallet.
+
+**Legenda:**
+
+* `ul grid gap-2` com classe `grid-cols-3` quando `data.length>=3` senão `grid-cols-2` (adapta conforme resposta: `subDays(now,6)` e normalizar cores).
+* Item: `dot h-2.5 w-2.5 rounded-full style={{background: color}}` + `span truncate text-xs text-foreground-secondary` com `wallet.name`.
+
+**Outras variantes (UI distinta, não rosca):**
+
+* `inflows` — `InflowsOutflowsList type="inflows"`: para cada wallet `value = sum destination=WALLET nos últimos 6 dias (subDays(now,6) até now)`, filtra `isWithinInterval(parseISO(tx.date), {start: subDays(now,6), end: now})`, ordena desc, exibe `row: dot+name vs $value` + barra `h-1.5 bg-border-subtle > div width% = value/max`.
+* `outflows` — idem mas `source=WALLET`.
+* `transactions` — `TransactionsRankList`: conta `tx onde source.id ou destination.id === wallet.id`, filtra `count>0`, ordena `desc`, exibe mini-tabela `grid [rank|wallet|Tx]` com header `bg-surface-elevated` e `rank` 1..n. Maiores em cima, menores embaixo.
+
+**Estados:**
+
+* `isLoading` (wallets || transactions) → `LoadingState "Loading analysis..."` dentro de `rounded-xl border bg-surface p-4`.
+* `isError` → `ErrorState "Unable to load analysis" + Button Try again` com `refetch` ambas queries.
+* `EmptyState` quando `participationData.length===0` ou `totalBalance<=0` / listas vazias.
+
+**Tokens & Responsivo:** `border-border`, `bg-surface`, `text-foreground*`, `tabular-nums`; `ResponsiveContainer` garante tablet/desktop; `flex-col lg:flex-row` já em `wallets-page.tsx:10`.
+
+### 2. `pages/wallets-page.tsx:1-42`
+
+```text
+- import { AnalysisWallets } from "./Wallets/analysis-wallets"
+- mantém grid grid-cols-1 md:grid-cols-2 gap-4 (Summary + Analytics) sem restilizar
+- substitui placeholder <div Wallets by participation ...> por <AnalysisWallets />
+```
+
+Estilo focado apenas no slot exigido; `PageHeader` e `All Wallets List` intactos.
+
+### Validação
+
+```text
+npm run typecheck → ✅ sucesso (corrigido CustomTooltip typing e memo deps)
+npm run lint      → ✅ 0 errors, 2 warnings pre-existentes em app-header.tsx (fora de escopo)
+npm run build     → ✅ sucesso (920 kB, inclui recharts; tsc -b && vite build)
+```
+
+Correções necessárias: `react-is` instalado para recharts 3.x, `es-toolkit` deduped, `CustomTooltip` tipado como `{active?:boolean; payload?:Array<{payload:ChartEntry;value:number}>}`.
+
+### Checklist Fase 5B-Step2
+
+```text
+[ x ] Analytics section implementada em analysis-wallets.tsx (não em wallets-page.tsx)
+[ x ] Header: Analysis by participation (esquerda) + Ellipsis (direita) + dropdown 4 itens
+[ x ] Descrição por variante abaixo do header
+[ x ] Gráfico rosca (Recharts Pie inner 62% outer 88%, paddingAngle 1)
+[ x ] Centro rosca: ícone Wallet + label Total Balance + $ totalBalance USD
+[ x ] Tooltip fatia: nome wallet + saldo formatUSD
+[ x ] Cores normalizadas (wallet.color ou fallback palette)
+[ x ] Legenda 3 colunas (dot cor + nome); adapta grid-cols-2 se <3
+[ x ] by inflows: lista barras últimos 6 dias (subDays(now,6))
+[ x ] by outflows: lista barras últimos 6 dias
+[ x ] by transactions: mini-tabela rank ordenada desc
+[ x ] Cada variante UI distinta (não repete rosca)
+[ x ] LoadingState cobrindo Analytics todo
+[ x ] ErrorState com Retry
+[ x ] EmptyState quando sem dados
+[ x ] GET /wallets + GET /transactions reais (sem mock)
+[ x ] Sem saldo inventado (usdValue real por wallet)
+[ x ] Dark/Light via tokens
+[ x ] Responsive (ResponsiveContainer, grid-cols-1 md:grid-cols-2 pai)
+[ x ] Sem estilização desnecessária em wallets-page.tsx
+[ x ] recharts instalado (3.1.2 + es-toolkit + react-is)
+[ x ] typecheck ✓  lint ✓  build ✓
+```
+
+Próximos passos: All Wallets List lateral, Cards com filtros/sort, All Activities com paginação.
+```
+
+---
+
+## 2026-08-30 — Fase 5B-Step3: Wallets List (Mini-tabela lateral)
+
+**Fase:** 5 — Wallets (UI por Sections)
+
+**Descrição:** Implementação da coluna lateral direita `Wallets` (mini-tabela sem header) na parte superior da página, ao lado de `Summary` + `Analysis`. Exibe 4 colunas por wallet: ícone, nome+tipo, saldo+assets, participação (barra + %). Wallets ordenadas por maior saldo decrescente. Topo com título e 4 botões icon-only com tooltip (depósito, retirada, transferência, ajuste) — global placeholder.
+
+**Arquivos criados/modificados:**
+
+```text
+frontend/src/pages/Wallets/list-wallets.tsx   (implementado — 4 colunas + participações)
+frontend/src/pages/wallets-page.tsx           (import ListWallets, substitui placeholder)
+```
+
+---
+
+### 1. `pages/Wallets/list-wallets.tsx`
+
+**Header da section:**
+
+* Layout `flex justify-between gap-2` — esquerda `h2 text-sm font-semibold "Wallets"`, direita `flex gap-1` com 4 `IconButton ghost sm` envolvidos em `SimpleTooltip side="top"`:
+  * `ArrowDownToLine` — Deposit
+  * `ArrowUpFromLine` — Withdraw
+  * `ArrowLeftRight` — Transfer
+  * `SlidersHorizontal` — Adjust
+* `aria-label` obrigatório, `onClick` placeholder `console.log("... clicked")` — global (não por wallet) conforme resposta.
+
+**Cálculo (sem saldo inventado, saldo negativo = erro):**
+
+```text
+wallets = useWalletsQuery({limit:100}).data (memoizado)
+transactions = useTransactionsQuery({limit:100, sort:"-date"}).data (memoizado)
+balances: Map<walletId,0>
+for tx in transactions:
+  if dest.type==="WALLET" && dest.id in map) balances[dest]+=usdValue
+  if src.type==="WALLET" && src.id in map) balances[src]-=usdValue
+hasNegative = any balance < 0  → se verdadeiro → ErrorState "Negative balance detected"
+totalBalance = Σ balance>0 (fallback Σ inflows-outflows se todos <=0, igual Summary/Analysis)
+rows: wallets.map((w,i)=>({
+  balance: balances.get(w.id)??0,
+  participation: total>0 ? (balance>0?balance/total*100:0):0,
+  assetsLabel: "0 assets" (fixo, conforme resposta — lógica futura ajustará),
+  color: normalizeColor(w.color,i)
+})).sort((a,b)=>b.balance-a.balance)
+```
+
+* `normalizeColor` igual ao Analysis (`/^#([0-9A-Fa-f]{3}){1,2}$/` + FALLBACK_COLORS 10 cores).
+* `formatUSD` via `Intl.NumberFormat("en-US",{currency:"USD"})` + `tabular-nums`.
+* Ordenação `b.balance - a.balance` garante maior saldo primeiro.
+
+**Tabela — 4 colunas sem header:**
+
+* Container `ul divide-y divide-border-subtle`, linha `grid grid-cols-[32px_1fr_auto_96px] gap-3 items-center py-2.5`:
+  1. **Icon:** `h-8 w-8 rounded-lg bg-surface-elevated border` + `Wallet h-4 w-4 text-foreground-muted`
+  2. **Nome+Tipo:** `flex flex-col min-w-0` → `span truncate text-xs font-medium` (name) + `span text-[10px] uppercase tracking-wide text-foreground-muted` (type)
+  3. **Saldo+Assets:** `flex flex-col items-end` → `span text-xs font-semibold tabular-nums` (`$1,234.56`) + `span text-[10px] text-foreground-muted` (`0 assets`)
+  4. **Participação:** `flex flex-col gap-1 w-24` → `span text-[10px] tabular-nums text-right` (`12.3%` via `toFixed(1)`) + `div h-1.5 rounded-full bg-border-subtle` > `div h-full rounded-full width% = min(100,participation)` + `background: color`
+* `truncate` + `title` para nomes longos; `tracking-tight` para valores.
+
+**Estados:**
+
+* `isLoading` (wallets || transactions) → `LoadingState "Loading wallets..."` dentro de `w-120 border bg-surface rounded-xl p-4`
+* `isError` (query) → `ErrorState "Unable to load wallets" + Try again` (refetch ambas)
+* `hasNegative` → `ErrorState "Negative balance detected" description com totalBalance` (exigido: saldo negativo nunca deve ocorrer; se backend permitir, mostrar erro)
+* `rows.length===0` → `EmptyState "No wallets yet"`
+* Container externo sempre `flex flex-col gap-3 p-4 w-full lg:w-120 border border-border bg-surface rounded-xl` preservando `lg:flex-row` da página.
+
+**Tokens & Responsivo:** `border-border`, `bg-surface`, `text-foreground*`, `divide-border-subtle`; coluna lateral já responsiva `w-full lg:w-120` em `wallets-page.tsx:12`; grid de 4 colunas mantém leitura em tablet.
+
+### 2. `pages/wallets-page.tsx:1-45`
+
+```text
+- import { ListWallets } from "./Wallets/list-wallets"
+- substitui <div>All Wallets List</div> placeholder por <ListWallets />
+- mantém flex flex-col lg:flex-row (Summary+Analysis à esquerda, List à direita)
+```
+
+Sem restilização além do slot exigido; `PageHeader` intacto.
+
+### Validação
+
+```text
+npm run typecheck → ✅ sucesso
+npm run lint      → ✅ 0 errors, 2 warnings pre-existentes em app-header.tsx
+npm run build     → ✅ sucesso (929 kB com recharts; tsc -b && vite build)
+```
+
+### Checklist Fase 5B-Step3
+
+```text
+[ x ] Wallets List implementado em list-wallets.tsx (não em wallets-page.tsx)
+[ x ] Topo: título "Wallets" + 4 IconButton ghost sm com SimpleTooltip (Deposit/Withdraw/Transfer/Adjust)
+[ x ] Tabela sem header, 4 colunas: icon wallet | nome+tipo | saldo+0 assets | participação barra+%
+[ x ] Ordenado por maior saldo decrescente (b.balance - a.balance)
+[ x ] Saldo formatado $ USD (Intl, tabular-nums)
+[ x ] Assets fixo "0 assets" para todos (conforme resposta)
+[ x ] Participação = balance/totalBalance*100, barra width = participation% com cor normalizada
+[ x ] Saldo negativo → ErrorState "Negative balance detected" (não exibe valor negativo)
+[ x ] LoadingState / ErrorState / EmptyState completos com retry
+[ x ] Sem saldo inventado (usdValue real via GET /transactions)
+[ x ] Sem lógica HTTP na UI (apenas useWalletsQuery/useTransactionsQuery)
+[ x ] 4 botões global placeholder (console.log)
+[ x ] Dark/Light via tokens
+[ x ] Responsive (w-full lg:w-120)
+[ x ] typecheck ✓  lint ✓  build ✓
+```
+
+Próximos passos: Cards wallets com filtros/sort/pesquisa e All Activities com paginação.
+```
+
+---
+
+## 2026-08-30 — Fase 5B-Step4: Cards Wallets (Grid/Table + Filtros + Expansão + BarChart)
+
+**Fase:** 5 — Wallets (UI por Sections)
+
+**Descrição:** Implementação da section do meio (`CardsWallets`) com dois modos de visualização (Grid e Table) comutáveis no topo, filtros de status (`all/active/deactived/archived` sem search), 5 camadas por card (ícone+nome/status, saldo, BarChart azul, barra participação só barra, 4 ações), tabela com colunas `wallet, saldo, assets, status, participação, actions, option` e expansão múltipla (linha/card inteira + seta `ChevronDown`) mostrando tabela vazia de assets com colunas `Asset | Quantity | Purchase | Current Value | PNL` (vazia conforme resposta).
+
+**Arquivos criados/modificados:**
+
+```text
+frontend/src/pages/Wallets/cards-wallets.tsx   (implementado — grid/table, filtros, BarChart, expansão)
+frontend/src/pages/wallets-page.tsx            (import CardsWallets, substitui placeholder)
+frontend/src/components/ui/icon-button.tsx     (fix xs sizeMap: add xs:14)
+```
+
+---
+
+### 1. `pages/Wallets/cards-wallets.tsx`
+
+**Topo da section:**
+
+* `flex sm:flex-row justify-between gap-3`
+* Esquerda: `flex gap-1` 4 `Button size="sm" h-7` (`all → "all"`, `active`, `inactive → label "deactived"`, `archived`) com `variant={filter===s?"secondary":"ghost"}` e `capitalize`.
+* Direita: grupo segmentado `flex rounded-lg border overflow-hidden divide-x divide-border` com 2 `Button size="sm" rounded-none h-7 gap-1.5`:
+  * `LayoutGrid` + `Grid` (`viewMode==="grid"` → `secondary`)
+  * `Table2` + `Table` (`viewMode==="table"` → `secondary`)
+  * `aria-pressed` para acessibilidade, sem gap entre botões.
+
+**Estado & Dados:**
+
+* `useWalletList()` + `useWalletBalances(wallets,transactions)` já ordenado saldo desc (reuso `hooks/` e `lib/`).
+* `statusFilter: StatusFilter` + `viewMode: ViewMode` + `expandedIds: Set<string>` (permite múltiplos simultâneos, `toggleExpanded` com `new Set`).
+* `filteredRows = rows.map(r=>({...r, status: wallets.find(w=>w.id===r.id)?.status})).filter(all|status)` memoizado.
+* `chartById` memoizado: para cada `filteredRows` gera 7 barras sintéticas `BLUE_PALETTE = ["#1e40af","#2563eb","#3b82f6","#60a5fa","#93c5fd","#bfdbfe"]` com `value ~ base*0.18` (mock neutro azul) — usado só no grid. `maxChartValue = max(...)`.
+* `isEmptyWallets` via `walletsQuery.pagination.total` para `EmptyState` diferenciado de `filtered 0`.
+
+**Grid (`viewMode==="grid"`):**
+
+* `WalletCard` presentational dentro do mesmo arquivo:
+  * Container `role="button" tabIndex 0` com `onClick` + `onKeyDown Enter/Space` expande; `cursor-pointer hover:border`.
+  * Camada 1: `flex justify-between` icon `Wallet 8x8` + `name truncate` esq, `Badge status + ChevronDown rotate-180 quando expandido` dir.
+  * Camada saldo: `Total Balance` `text-xs muted` + `formatUSD(balance)` `text-lg font-semibold tabular-nums`.
+  * Camada BarChart: modelo exato pedido: `ResponsiveContainer 100% h-16` > `BarChart barCategoryGap 20%` > `XAxis hide YAxis hide domain [0,max]` > `ReferenceLine y=0 stroke #374151 dash 3 3` > `Bar dataKey value radius [2,2,0,0] maxBarSize 12` com `Cell fill={entry.color}`; fallback `border-t dashed` se vazio.
+  * Barra participação só barra: `h-1.5 rounded-full bg-border-subtle > div width% = min(100,participation)` + `%` à direita pequeno.
+  * Ações: `ActionButtons` (4 `IconButton xs ghost` `ArrowDownRight/ArrowUpRight/ArrowLeftRight/SlidersHorizontal` com `SimpleTooltip top`) + `%` texto.
+  * Expand: `AssetExpandContent` com grid `grid-cols-5 gap-2 text-[10px] uppercase` header `Asset | Quantity | Purchase | Current Value | PNL` + `div py-6 text-center "No assets"` vazio.
+* Grid `grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4`.
+
+**Table (`viewMode==="table"`):**
+
+* Wrapper `overflow-hidden rounded-lg border`
+* Header desktop `hidden md:grid grid-cols-[1.4fr_0.9fr_0.6fr_0.8fr_0.9fr_140px_80px_32px] gap-2 px-4 py-2 bg-surface-elevated border-b text-[10px] uppercase` com `Wallet | Saldo | Assets | Status | Participação | Actions | Option |`.
+* Linha `grid same cols px-4 py-3 hover:bg-surface-elevated/50 cursor-pointer` com colunas: wallet icon+name/type, saldo `formatUSD` right, assets `0` center, status `StatusBadge`, participação só barra `h-1.5`, actions 4 icons, option `Pencil/Trash2` com tooltip, arrow `ChevronDown rotate`.
+* Expand: `col-span-full bg-surface-elevated/30 border-t px-4 pb-3` com mesma `grid grid-cols-5` header 5 colunas vazio.
+
+**Módulos auxiliares:**
+
+* `ActionButtons` local com `stopPropagation` + `console.log` placeholder global.
+* `StatusBadge` com `Badge variant success|warning|default`.
+* `AssetExpandContent` vazio (5 colunas) conforme resposta 3.
+* `BLUE_PALETTE` azul neutro derivado e mantido.
+
+**Hooks/Lib/Types reusados:**
+
+* `hooks/useWalletList` + `hooks/useWalletBalances` (não duplicado), `lib/formats formatUSD`, `lib/wallet-utils normalizeColor` (não reimportado onde desnecessário), `types` inline `WalletCard row` com `status`.
+
+**Estados:**
+
+* `isLoading` → `LoadingState`
+* `isError` → `ErrorState + Try again`
+* `hasNegative` → `ErrorState Negative balance detected`
+* `isEmptyWallets` → `EmptyState No wallets yet`
+* `filteredRows 0` → `EmptyState No wallets match filter`
+
+**Tokens & Responsivo:** `border-border bg-surface text-foreground* tabular-nums`, cards grid responsivo, tabela `overflow-hidden` + `hidden md:grid` para header, linhas `grid-cols-1 md:grid-cols-...`.
+
+### 2. `pages/wallets-page.tsx:1-51`
+
+```text
+- import { CardsWallets } from "./Wallets/cards-wallets"
+- substitui <div>Card Wallets: list...</div> por <div p-4><CardsWallets/></div>
+- mantém ListWallets lateral e Summary/Analysis topo sem restilizar
+```
+
+### 3. `components/ui/icon-button.tsx:8`
+
+* Fix `iconSizeMap: Record<string,number> = { xs:14, sm:16, md:18, lg:20 }` para suportar `size="xs"` usado em List/Cards.
+
+### Validação
+
+```text
+npm run typecheck → ✅ sucesso
+npm run lint      → ✅ 0 errors, 2 warnings pre-existentes em app-header.tsx
+npm run build     → ✅ sucesso (989 kB com recharts + BarChart; tsc -b && vite build)
+```
+
+### Checklist Fase 5B-Step4
+
+```text
+[ x ] CardsWallets implementado com grid e table viewModes (botões sem gap, ícone+texto, aria-pressed)
+[ x ] Topo esquerda: all/active/deactived(→inactive)/archived filtros (sem search)
+[ x ] Grid: 5 camadas por card (icon+nome/status com Chevron, saldo, BarChart modelo fornecido azul, barra participação só barra, 4 ações Ícones ArrowDownRight/ArrowUpRight/ArrowLeftRight/SlidersHorizontal)
+[ x ] Table: colunas wallet, saldo, assets (0), status Badge, participação barra, actions 4 ícones, option Pencil/Trash2, header uppercase
+[ x ] Expansão múltipla simultânea (Set<string>) via clique linha/card inteira + Chevron rotate-180
+[ x ] Expand conteúdo vazio: header Asset | Quantity | Purchase | Current Value | PNL + "No assets"
+[ x ] Ordenado por saldo decrescente (via useWalletBalances)
+[ x ] Saldo negativo → ErrorState (igual List)
+[ x ] Cores barra participação = wallet.color normalizada; BarChart cores BLUE_PALETTE (#1e40af … #bfdbfe)
+[ x ] Reuso hooks (useWalletList, useWalletBalances), lib (formatUSD), types inline, sem duplicar HTTP
+[ x ] Dark/Light via tokens, tabular-nums, responsive grid/table
+[ x ] IconButton xs fix
+[ x ] typecheck ✓  lint ✓  build ✓
+```
+
+Próximos passos: All Activities tabela com paginação e filtros (All Wallets, All Type, All time).
+```
+
+---
+
+## 2026-08-30 — Fase 5B-Step5: Modais Wallet (Add / Edit / Delete / Archive)
+
+**Fase:** 5 — Wallets (UI por Sections + CRUD)
+
+**Descrição:** Criação dos modais de criação, edição, exclusão e arquivamento de wallets. Form add/edit com campos `wallet Name`, `wallet type` (botões em grupo de 3), `description` opcional, `wallet color` via 8 círculos clicáveis, e resumo mostrando `name`, `type`, `color` e `description`. Edit reaproveita UI do Add com valores pré-preenchidos. Delete e Archive são modais simples de confirmação. Integração: `New Wallet` em `wallets-page.tsx` abre Add, `CardsWallets` table abre Edit/Delete/Archive via `Pencil/Archive/Trash2` e redireciona para filtro `archived` após arquivar.
+
+**Arquivos criados/modificados:**
+
+```text
+frontend/src/components/ui/dialog.tsx                 (novo primitive modal)
+frontend/src/components/modals/add-wallets.tsx        (implementado AddWalletModal com 8 círculos cor + resumo)
+frontend/src/pages/Wallets/edit-modal-wallet.tsx      (implementado EditWalletModal — UI igual Add)
+frontend/src/pages/Wallets/delete-modal-wallet.tsx    (implementado DeleteWalletModal)
+frontend/src/pages/Wallets/archived-modal-wallet.tsx  (implementado ArchiveWalletModal + redirect)
+frontend/src/pages/wallets-page.tsx                   (wire AddWalletModal no PageHeader New Wallet)
+frontend/src/pages/Wallets/cards-wallets.tsx          (wire Edit/Delete/Archive modals na tabela + fix WalletIcon conflito)
+frontend/src/components/ui/icon-button.tsx            (fix xs sizeMap já em Step4)
+```
+
+---
+
+### 1. `components/ui/dialog.tsx`
+
+Primitive sem Radix Dialog (inexistente no projeto):
+
+* `Dialog({open,onClose,title,description,children})` via `createPortal(document.body)` com `fixed inset-0 z-50 flex center p-4`, backdrop `bg-foreground/40 backdrop-blur-sm` clicável `onClose`, content `max-w-lg max-h-[90vh] overflow-auto rounded-xl border bg-surface shadow-lg`, header com `title` (`text-lg font-semibold`), `description` (`text-xs muted`) e `IconButton ghost sm X` close. `useEffect` trava `body overflow` e ouve `Escape`. `role="dialog" aria-modal="true"` + `aria-labelledby`. StopPropagation no content.
+
+### 2. `components/modals/add-wallets.tsx` — `AddWalletModal`
+
+* Form `useForm<CreateWalletFormData>({resolver: zodResolver(createWalletSchema), mode:"onChange", defaultValues:{name:"",type:"crypto",color:"",description:""}})`
+* Campos:
+  * `wallet Name` — `Label required` + `Input id wallet-name {...register("name")} aria-invalid` + erro `text-xs text-danger`
+  * `wallet type` — `grid grid-cols-3 gap-2` com `WALLET_TYPES` 6 itens (`exchange/crypto/microwallet` / `hardware/banking/other`). Botão `rounded-lg border p-3 text-xs capitalize` `bg-primary` quando `watch("type")===t` senão `bg-surface hover:bg-surface-elevated`. `onClick setValue("type",t,{shouldValidate,shouldDirty})`
+  * `description` — `Textarea rows 3 {...register("description")}`
+  * `wallet color` — 8 círculos `COLOR_OPTIONS = ["#3b82f6","#22c55e","#f59e0b","#ef4444","#8b5cf6","#06b6d4","#ec4899","#6366f1"]` com `h-8 w-8 rounded-full border-2` `background:c` + `scale-110 border-foreground` quando selecionado (`watch("color")===c`). Clique setValue. Sem input text (só círculos).
+* Resumo: `showSummary = name||type||color||description` → `div rounded-lg border bg-surface-elevated p-3` com `Summary` `dot color + name · type` + `description line-clamp-2`
+* Submit: `useCreateWalletMutation` → `payload {name,type,color:color||undefined,description:description||undefined}` → `mutateAsync` → `handleClose reset + onClose` em `onSuccess`; `onError` mapeia `ApiError.code==="WALLET_ALREADY_EXISTS"` → `setServerError`, demais `err.message` em `Alert danger`. Footer `Button outline Cancel` + `Button primary loading Create Wallet disabled={!isValid}`.
+
+### 3. `pages/Wallets/edit-modal-wallet.tsx` — `EditWalletModal`
+
+* UI igual ao Add (requisito). Props `{open,wallet:Wallet|null,onClose}`.
+* `useForm<UpdateWalletFormData>({resolver: zodResolver(updateWalletSchema), defaultValues:{name:"",type:undefined,color:"",description:""}})` + `useEffect reset` quando `wallet && open` preenche `wallet.name/type/color/description`.
+* Botões type idem, cor 8 círculos. Resumo mostra `watchedName||wallet.name` etc + `description`.
+* Submit: computa `payload` diff (só campos alterados vs `wallet`), se vazio `handleClose`; senão `useUpdateWalletMutation({walletId,data:payload})`. Erros `WALLET_ALREADY_EXISTS` e `WALLET_ARCHIVED` → `Alert danger`.
+
+### 4. `pages/Wallets/delete-modal-wallet.tsx` — `DeleteWalletModal`
+
+* Props `{open,wallet,onClose}`. Texto `Delete "name" permanently?` + `This action cannot be undone.`
+* Preview `div border bg-surface-elevated p-3` com `name · type`.
+* Footer `Cancel` + `Delete Wallet` `variant danger loading` → `useDeleteWalletMutation(wallet.id)` → `onClose` em sucesso. Erro em `Alert danger`.
+
+### 5. `pages/Wallets/archived-modal-wallet.tsx` — `ArchiveWalletModal`
+
+* Props `{open,wallet,onClose,onArchived?:()=>void}`. `Alert warning` `Archiving is irreversible...` + preview idem.
+* Footer `Cancel` + `Archive Wallet primary loading` → `useArchiveWalletMutation` → `onClose + onArchived?.()` (chamado para redirecionar). Em `CardsWallets` `onArchived={()=>setStatusFilter("archived")}` cumpre requisito 4.
+* Erro em `Alert danger`.
+
+### 6. `pages/wallets-page.tsx:1-60`
+
+* `import {AddWalletModal}` + `const [addOpen,setAddOpen]=useState(false)`
+* `PageHeader` `New Wallet` Button `onClick={()=>setAddOpen(true)}` (antes `console.log`)
+* Render `<AddWalletModal open={addOpen} onClose={()=>setAddOpen(false)} />` abaixo da página.
+
+### 7. `pages/Wallets/cards-wallets.tsx:3-454`
+
+* Rename `Wallet` lucide → `WalletIcon` para evitar conflito com `type Wallet`.
+* Import `EditWalletModal/DeleteWalletModal/ArchiveWalletModal` + `Archive` icon.
+* State `editWallet/deleteWallet/archiveWallet: Wallet|null`.
+* Tabela `option` coluna adicionado `Archive` botão (`Archive` icon) entre Edit e Delete, todos `onClick` com `wallets.find(x=>x.id===row.id)` → `set...Wallet(w)`.
+* Render no fim: `<EditWalletModal open={!!editWallet} wallet={editWallet} onClose={()=>setEditWallet(null)}/>` idem Delete/Archive (Archive com `onArchived={()=>setStatusFilter("archived")}`).
+
+**Reuso hooks/lib/types:**
+
+* `createWalletSchema/updateWalletSchema` de `schemas/wallet.schema.ts`, `WALLET_TYPES` de `types/wallet.types.ts`, mutations de `wallet-queries.ts`, `color` max20 validado, `name` max80, `description` max500 — sem duplicar HTTP.
+
+### Validação
+
+```text
+npm run typecheck → ✅ sucesso (fix ApiError.message vs .error.message, WalletIcon alias)
+npm run lint      → ✅ 0 errors, 4 warnings (2 app-header + 2 react-hook-form watch incompatible-library)
+npm run build     → ✅ sucesso (1,043 kB com recharts; tsc -b && vite build)
+```
+
+### Checklist Fase 5B-Step5
+
+```text
+[ x ] Dialog primitive criado (portal, backdrop, Escape, body lock)
+[ x ] AddWalletModal implementado (add-wallets.tsx) com wallet Name, wallet type (grid 3 colunas), description, wallet color (8 círculos clicáveis), resumo com name+type+color+description
+[ x ] EditWalletModal implementado (UI igual Add, prefill, diff payload, resumo)
+[ x ] DeleteWalletModal simples (confirmação + danger)
+[ x ] ArchiveWalletModal simples (warning irreversível + redirect para archived)
+[ x ] New Wallet em wallets-page abre Add
+[ x ] CardsWallets table Pencil/Archive/Trash2 abrem Edit/Archive/Delete
+[ x ] 8 círculos cor clicáveis (select com scale + border-foreground)
+[ x ] Resumo exibindo description também
+[ x ] Melhor decisão archive: botão Archive na coluna option (antes Delete)
+[ x ] Redirect archived → setStatusFilter("archived")
+[ x ] Sem lógica HTTP na UI além de mutations (via wallet-queries)
+[ x ] Dark/Light via tokens, accessible (role dialog, aria-modal, aria-invalid)
+[ x ] typecheck ✓  lint ✓  build ✓
+```
+
+Próximos passos: All Activities tabela com paginação e filtros (All Wallets, All Type, All time) e Skeletons/toasts se necessário.
+```

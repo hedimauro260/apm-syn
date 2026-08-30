@@ -5,7 +5,8 @@ import { clsx } from "clsx";
 import { iconButtonVariants } from "@/lib/variants";
 import { Spinner } from "./spinner";
 
-const iconSizeMap = {
+const iconSizeMap: Record<string, number> = {
+  xs: 14,
   sm: 16,
   md: 18,
   lg: 20,
