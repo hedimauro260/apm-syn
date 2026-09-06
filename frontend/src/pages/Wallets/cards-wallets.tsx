@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import {
   Wallet as WalletIcon,
   ArrowDownRight,
@@ -11,11 +11,15 @@ import {
   Table2,
   ChevronDown,
   Archive,
+  MoreHorizontal,
 } from "lucide-react";
 import { BarChart, Bar, Cell, XAxis, YAxis, ReferenceLine, ResponsiveContainer } from "recharts";
-import { useWalletList } from "@/hooks/useWalletList";
-import { useWalletBalances } from "@/hooks/useWalletBalances";
+import { useWalletList } from "@/hooks/use-wallet-list";
+import { useWalletBalances } from "@/hooks/use-wallet-balances";
+import { useWalletAssets } from "@/hooks/use-wallet-assets";
+import { useActivateWalletMutation, useDeactivateWalletMutation } from "@/features/wallets/api/wallet-queries";
 import { formatUSD } from "@/lib/formats";
+import { getCoinLogoUrl } from "@/features/assets/logo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
@@ -26,7 +30,11 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { EditWalletModal } from "./edit-modal-wallet";
 import { DeleteWalletModal } from "./delete-modal-wallet";
 import { ArchiveWalletModal } from "./archived-modal-wallet";
+import { AddTransactionModal } from "@/components/modals/add-transaction";
+import { ListWallets } from "./list-wallets";
+import { WalletDetailPanel } from "./details-wallets";
 import type { Wallet } from "@/features/wallets/types/wallet.types";
+import type { WalletAsset } from "@/hooks/use-wallet-assets";
 
 type StatusFilter = "all" | "active" | "inactive" | "archived";
 type ViewMode = "grid" | "table";
@@ -36,7 +44,7 @@ const ICON_STROKE = 1;
 
 const BLUE_PALETTE = ["#1e40af", "#2563eb", "#3b82f6", "#60a5fa", "#93c5fd", "#bfdbfe"];
 
-function StatusBadge({ status }: { status: string }) {
+export function StatusBadge({ status }: { status: string }) {
   const variant = status === "active" ? "success" : status === "inactive" ? "warning" : "default";
   return (
     <Badge variant={variant} size="sm">
@@ -45,31 +53,70 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function ActionButtons({ onStop, size = "xs" as const }: { onStop?: (e: React.MouseEvent) => void; size?: "xs" | "sm" }) {
-  const handler = (label: string) => (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onStop?.(e);
-    console.log(`${label} clicked`);
-  };
+export function ActionButtons({
+  onDeposit,
+  onWithdraw,
+  onTransfer,
+  onAdjust,
+  size = "xs" as const,
+}: {
+  onDeposit?: () => void;
+  onWithdraw?: () => void;
+  onTransfer?: () => void;
+  onAdjust?: () => void;
+  size?: "xs" | "sm";
+}) {
   return (
     <div className="flex items-center gap-1">
       <SimpleTooltip label="Deposit" side="top">
-        <IconButton variant="ghost" size={size} aria-label="Deposit" onClick={handler("Deposit")}>
+        <IconButton
+          variant="ghost"
+          size={size}
+          aria-label="Deposit"
+          onClick={e => {
+            e.stopPropagation();
+            onDeposit?.();
+          }}
+        >
           <ArrowDownRight size={ICON_SIZE} strokeWidth={ICON_STROKE} />
         </IconButton>
       </SimpleTooltip>
       <SimpleTooltip label="Withdraw" side="top">
-        <IconButton variant="ghost" size={size} aria-label="Withdraw" onClick={handler("Withdraw")}>
+        <IconButton
+          variant="ghost"
+          size={size}
+          aria-label="Withdraw"
+          onClick={e => {
+            e.stopPropagation();
+            onWithdraw?.();
+          }}
+        >
           <ArrowUpRight size={ICON_SIZE} strokeWidth={ICON_STROKE} />
         </IconButton>
       </SimpleTooltip>
       <SimpleTooltip label="Transfer" side="top">
-        <IconButton variant="ghost" size={size} aria-label="Transfer" onClick={handler("Transfer")}>
+        <IconButton
+          variant="ghost"
+          size={size}
+          aria-label="Transfer"
+          onClick={e => {
+            e.stopPropagation();
+            onTransfer?.();
+          }}
+        >
           <ArrowLeftRight size={ICON_SIZE} strokeWidth={ICON_STROKE} />
         </IconButton>
       </SimpleTooltip>
       <SimpleTooltip label="Adjust" side="top">
-        <IconButton variant="ghost" size={size} aria-label="Adjust" onClick={handler("Adjust")}>
+        <IconButton
+          variant="ghost"
+          size={size}
+          aria-label="Adjust"
+          onClick={e => {
+            e.stopPropagation();
+            onAdjust?.();
+          }}
+        >
           <SlidersHorizontal size={ICON_SIZE} strokeWidth={ICON_STROKE} />
         </IconButton>
       </SimpleTooltip>
@@ -77,43 +124,134 @@ function ActionButtons({ onStop, size = "xs" as const }: { onStop?: (e: React.Mo
   );
 }
 
-function AssetExpandContent() {
+export function MoreDropdown({ onEdit, onArchive, onDelete }: { onEdit?: () => void; onArchive?: () => void; onDelete?: () => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
   return (
-    <div className="mt-3 border-t border-border pt-3">
-      <div className="grid grid-cols-5 gap-2 px-2 py-2 text-[10px] font-medium text-foreground-muted uppercase tracking-wide">
-        <span>Asset</span>
-        <span className="text-right">Quantity</span>
-        <span className="text-right">Purchase</span>
-        <span className="text-right">Current Value</span>
-        <span className="text-right">PNL</span>
-      </div>
-      <div className="flex flex-col items-center justify-center py-6 text-xs text-foreground-muted">No assets</div>
+    <div className="relative" ref={ref}>
+      <IconButton variant="ghost" size="xs" aria-label="More" onClick={() => setOpen(!open)}>
+        <MoreHorizontal size={ICON_SIZE} strokeWidth={ICON_STROKE} />
+      </IconButton>
+      {open && (
+        <div className="absolute right-0 top-full mt-1 bg-surface border border-border rounded-lg shadow-lg z-50 py-1 min-w-30">
+          {onEdit && (
+            <button
+              onClick={() => { onEdit(); setOpen(false); }}
+              className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-foreground hover:bg-surface-elevated transition-colors"
+            >
+              <Pencil size={ICON_SIZE} strokeWidth={ICON_STROKE} />
+              Edit
+            </button>
+          )}
+          {onArchive && (
+            <button
+              onClick={() => { onArchive(); setOpen(false); }}
+              className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-foreground hover:bg-surface-elevated transition-colors"
+            >
+              <Archive size={ICON_SIZE} strokeWidth={ICON_STROKE} />
+              Archive
+            </button>
+          )}
+          {onDelete && (
+            <button
+              onClick={() => { onDelete(); setOpen(false); }}
+              className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-foreground hover:bg-surface-elevated transition-colors"
+            >
+              <Trash2 size={ICON_SIZE} strokeWidth={ICON_STROKE} />
+              Delete
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
-function WalletCard({
+function GridAssetExpandContent({ assets }: { assets: WalletAsset[] }) {
+  if (assets.length === 0) {
+    return (
+      <div className="mt-3 border-t border-border pt-3">
+        <div className="flex flex-col items-center justify-center py-6 text-xs text-foreground-muted">No assets</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3 border-t border-border pt-3">
+      <div className="flex flex-col gap-2">
+        {assets.map(asset => (
+          <div key={asset.symbol} className="flex items-center gap-2 p-2 rounded-lg bg-surface-elevated border border-border">
+            <img
+              src={getCoinLogoUrl(asset.externalId, "thumb")}
+              alt={asset.symbol}
+              className="h-5 w-5 rounded-full shrink-0"
+              onError={e => {
+                (e.target as HTMLImageElement).style.display = "none";
+              }}
+            />
+            <div className="flex flex-col min-w-0">
+              <span className="text-xs font-medium text-foreground truncate">{asset.symbol}</span>
+              <span className="text-[10px] text-foreground-muted tabular-nums">{asset.quantity.toLocaleString()}</span>
+            </div>
+            <span className="text-xs font-medium tabular-nums text-foreground shrink-0 ml-auto">{formatUSD(asset.currentValueUSD)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function GridWallets({
   row,
   isExpanded,
   onToggle,
   chartData,
   maxChartValue,
+  assets,
+  onDeposit,
+  onWithdraw,
+  onTransfer,
+  onAdjust,
+  onEdit,
+  onArchive,
+  onDelete,
+  onSelectWallet,
 }: {
-  row: { id: string; name: string; type: string; status: string; balance: number; participation: number; color: string };
+  row: { id: string; name: string; type: string; status: string; balance: number; participation: number; color: string; assetCount: number };
   isExpanded: boolean;
   onToggle: () => void;
   chartData: { value: number; color: string }[];
   maxChartValue: number;
+  assets: WalletAsset[];
+  onDeposit?: () => void;
+  onWithdraw?: () => void;
+  onTransfer?: () => void;
+  onAdjust?: () => void;
+  onEdit?: () => void;
+  onArchive?: () => void;
+  onDelete?: () => void;
+  onSelectWallet?: () => void;
 }) {
   return (
     <div
       role="button"
       tabIndex={0}
-      onClick={onToggle}
+      onClick={onSelectWallet}
       onKeyDown={e => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          onToggle();
+          onSelectWallet?.();
         }
       }}
       className="flex flex-col rounded-xl border border-border bg-surface p-4 gap-3 cursor-pointer hover:border-border/80 transition-colors"
@@ -123,22 +261,46 @@ function WalletCard({
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-elevated border border-border shrink-0">
             <WalletIcon size={ICON_SIZE} strokeWidth={ICON_STROKE} className="text-foreground-muted" />
           </span>
-          <span className="truncate text-sm font-medium text-foreground" title={row.name}>
-            {row.name}
-          </span>
+          <div className="flex flex-col min-w-0">
+            <span className="truncate text-sm font-medium text-foreground" title={row.name}>
+              {row.name}
+            </span>
+            <span className="text-[10px] text-foreground-muted truncate">{row.type}</span>
+          </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
           <StatusBadge status={row.status} />
           <ChevronDown
             size={14}
+            onClick={e => {
+              e.stopPropagation();
+              onToggle();
+            }}
             className={`text-foreground-muted transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
           />
         </div>
       </div>
 
-      <div className="flex flex-col">
+      <div className="flex flex-col gap-1">
         <span className="text-xs text-foreground-muted">Total Balance</span>
-        <span className="text-lg font-semibold tabular-nums tracking-tight text-foreground">{formatUSD(row.balance)}</span>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-lg font-semibold tabular-nums tracking-tight text-foreground">{formatUSD(row.balance)}</span>
+          {assets.length > 0 && (
+            <div className="flex items-center gap-1">
+              {assets.slice(0, 5).map(asset => (
+                <img
+                  key={asset.symbol}
+                  src={getCoinLogoUrl(asset.externalId, "thumb")}
+                  alt={asset.symbol}
+                  className="h-5 w-5 rounded-full shrink-0"
+                  onError={e => {
+                    (e.target as HTMLImageElement).style.display = "none";
+                  }}
+                />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="flex-1 h-16 min-w-0">
@@ -162,16 +324,19 @@ function WalletCard({
         )}
       </div>
 
-      <div className="h-1.5 w-full rounded-full bg-border-subtle overflow-hidden">
-        <div className="h-full rounded-full" style={{ width: `${Math.min(100, row.participation)}%`, background: row.color }} />
-      </div>
-
-      <div className="flex items-center justify-between gap-2 pt-1" onClick={e => e.stopPropagation()}>
-        <ActionButtons />
+      <div className="flex flex-col gap-1">
+        <div className="h-1.5 w-full rounded-full bg-border-subtle overflow-hidden">
+          <div className="h-full rounded-full" style={{ width: `${Math.min(100, row.participation)}%`, background: row.color }} />
+        </div>
         <span className="text-[10px] text-foreground-muted tabular-nums">{row.participation.toFixed(1)}%</span>
       </div>
 
-      {isExpanded && <AssetExpandContent />}
+      <div className="flex items-center justify-between gap-2 pt-1" onClick={e => e.stopPropagation()}>
+        <ActionButtons onDeposit={onDeposit} onWithdraw={onWithdraw} onTransfer={onTransfer} onAdjust={onAdjust} />
+        <MoreDropdown onEdit={onEdit} onArchive={onArchive} onDelete={onDelete} />
+      </div>
+
+      {isExpanded && <GridAssetExpandContent assets={assets} />}
     </div>
   );
 }
@@ -179,6 +344,7 @@ function WalletCard({
 export function CardsWallets() {
   const { isLoading, isError, wallets, transactions, refetchAll, walletsQuery } = useWalletList();
   const { rows, hasNegative, totalBalance } = useWalletBalances(wallets, transactions);
+  const { getWalletAssets, getAssetCount } = useWalletAssets(transactions);
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
@@ -186,6 +352,13 @@ export function CardsWallets() {
   const [editWallet, setEditWallet] = useState<Wallet | null>(null);
   const [deleteWallet, setDeleteWallet] = useState<Wallet | null>(null);
   const [archiveWallet, setArchiveWallet] = useState<Wallet | null>(null);
+  const [detailWallet, setDetailWallet] = useState<Wallet | null>(null);
+  const activateMutation = useActivateWalletMutation();
+  const deactivateMutation = useDeactivateWalletMutation();
+  const [txModal, setTxModal] = useState<{ open: boolean; tab: "deposit" | "withdraw" | "transfer" | "adjust"; walletId?: string }>({
+    open: false,
+    tab: "deposit",
+  });
 
   const toggleExpanded = (id: string) => {
     setExpandedIds(prev => {
@@ -200,11 +373,11 @@ export function CardsWallets() {
     const enriched = rows
       .map(r => {
         const w = wallets.find(x => x.id === r.id);
-        return { ...r, status: w?.status ?? "active" };
+        return { ...r, status: w?.status ?? "active", assetCount: getAssetCount(r.id) };
       })
       .filter(r => statusFilter === "all" || r.status === statusFilter);
     return enriched;
-  }, [rows, wallets, statusFilter]);
+  }, [rows, wallets, statusFilter, getAssetCount]);
 
   const chartById = useMemo(() => {
     const map = new Map<string, { value: number; color: string }[]>();
@@ -307,147 +480,58 @@ export function CardsWallets() {
       ) : filteredRows.length === 0 ? (
         <EmptyState title="No wallets match filter" description="Try changing the status filter." />
       ) : viewMode === "grid" ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
           {filteredRows.map(row => {
             const chartData = chartById.get(row.id) ?? [];
             const maxChartValue = Math.max(...chartData.map(c => c.value), 1);
             const isExpanded = expandedIds.has(row.id);
+            const assets = getWalletAssets(row.id);
             return (
-              <WalletCard
+              <GridWallets
                 key={row.id}
                 row={row}
                 isExpanded={isExpanded}
                 onToggle={() => toggleExpanded(row.id)}
                 chartData={chartData}
                 maxChartValue={maxChartValue}
+                assets={assets}
+                onSelectWallet={() => {
+                  const w = wallets.find(x => x.id === row.id);
+                  if (w) setDetailWallet(w);
+                }}
+                onDeposit={() => setTxModal({ open: true, tab: "deposit", walletId: row.id })}
+                onWithdraw={() => setTxModal({ open: true, tab: "withdraw", walletId: row.id })}
+                onTransfer={() => setTxModal({ open: true, tab: "transfer", walletId: row.id })}
+                onAdjust={() => setTxModal({ open: true, tab: "adjust", walletId: row.id })}
+                onEdit={() => {
+                  const w = wallets.find(x => x.id === row.id) ?? null;
+                  if (w) setEditWallet(w);
+                }}
+                onArchive={() => {
+                  const w = wallets.find(x => x.id === row.id) ?? null;
+                  if (w) setArchiveWallet(w);
+                }}
+                onDelete={() => {
+                  const w = wallets.find(x => x.id === row.id) ?? null;
+                  if (w) setDeleteWallet(w);
+                }}
               />
             );
           })}
         </div>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-border">
-          <div className="hidden md:grid grid-cols-[1.4fr_0.9fr_0.6fr_0.8fr_0.9fr_140px_80px_32px] gap-2 px-4 py-2 bg-surface-elevated border-b border-border text-[10px] font-medium text-foreground-muted uppercase tracking-wide">
-            <span>Wallet</span>
-            <span className="text-right">Saldo</span>
-            <span className="text-center">Assets</span>
-            <span className="text-center">Status</span>
-            <span>Participação</span>
-            <span className="text-center">Actions</span>
-            <span className="text-center">Option</span>
-            <span />
-          </div>
-
-          <ul className="flex flex-col divide-y divide-border-subtle">
-            {filteredRows.map(row => {
-              const isExpanded = expandedIds.has(row.id);
-              return (
-                <li key={row.id} className="flex flex-col">
-                  <div
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => toggleExpanded(row.id)}
-                    onKeyDown={e => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        toggleExpanded(row.id);
-                      }
-                    }}
-                    className="grid grid-cols-1 md:grid-cols-[1.4fr_0.9fr_0.6fr_0.8fr_0.9fr_140px_80px_32px] gap-2 md:gap-2 px-4 py-3 items-center cursor-pointer hover:bg-surface-elevated/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-elevated border border-border shrink-0">
-                        <WalletIcon size={ICON_SIZE} strokeWidth={ICON_STROKE} className="text-foreground-muted" />
-                      </span>
-                      <div className="flex flex-col min-w-0">
-                        <span className="truncate text-xs font-medium text-foreground" title={row.name}>
-                          {row.name}
-                        </span>
-                        <span className="text-[10px] text-foreground-muted truncate">{row.type}</span>
-                      </div>
-                    </div>
-
-                    <span className="text-xs font-semibold tabular-nums text-foreground md:text-right">{formatUSD(row.balance)}</span>
-
-                    <span className="text-xs text-foreground-muted md:text-center">0</span>
-
-                    <div className="flex md:justify-center">
-                      <StatusBadge status={row.status} />
-                    </div>
-
-                    <div className="flex flex-col gap-1">
-                      <div className="h-1.5 w-full rounded-full bg-border-subtle overflow-hidden">
-                        <div className="h-full rounded-full" style={{ width: `${Math.min(100, row.participation)}%`, background: row.color }} />
-                      </div>
-                    </div>
-
-                    <div className="flex justify-center" onClick={e => e.stopPropagation()}>
-                      <ActionButtons />
-                    </div>
-
-                    <div className="flex items-center justify-center gap-1" onClick={e => e.stopPropagation()}>
-                      <SimpleTooltip label="Edit" side="top">
-                        <IconButton
-                          variant="ghost"
-                          size="xs"
-                          aria-label="Edit"
-                          onClick={() => {
-                            const w = wallets.find(x => x.id === row.id) ?? null;
-                            if (w) setEditWallet(w);
-                          }}
-                        >
-                          <Pencil size={ICON_SIZE} strokeWidth={ICON_STROKE} />
-                        </IconButton>
-                      </SimpleTooltip>
-                      <SimpleTooltip label="Archive" side="top">
-                        <IconButton
-                          variant="ghost"
-                          size="xs"
-                          aria-label="Archive"
-                          onClick={() => {
-                            const w = wallets.find(x => x.id === row.id) ?? null;
-                            if (w) setArchiveWallet(w);
-                          }}
-                        >
-                          <Archive size={ICON_SIZE} strokeWidth={ICON_STROKE} />
-                        </IconButton>
-                      </SimpleTooltip>
-                      <SimpleTooltip label="Delete" side="top">
-                        <IconButton
-                          variant="ghost"
-                          size="xs"
-                          aria-label="Delete"
-                          onClick={() => {
-                            const w = wallets.find(x => x.id === row.id) ?? null;
-                            if (w) setDeleteWallet(w);
-                          }}
-                        >
-                          <Trash2 size={ICON_SIZE} strokeWidth={ICON_STROKE} />
-                        </IconButton>
-                      </SimpleTooltip>
-                    </div>
-
-                    <div className="flex justify-end">
-                      <ChevronDown size={14} className={`text-foreground-muted transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`} />
-                    </div>
-                  </div>
-
-                  {isExpanded && (
-                    <div className="px-4 pb-3 bg-surface-elevated/30 border-t border-border-subtle">
-                      <div className="grid grid-cols-5 gap-2 px-2 py-2 text-[10px] font-medium text-foreground-muted uppercase tracking-wide">
-                        <span>Asset</span>
-                        <span className="text-right">Quantity</span>
-                        <span className="text-right">Purchase</span>
-                        <span className="text-right">Current Value</span>
-                        <span className="text-right">PNL</span>
-                      </div>
-                      <div className="flex items-center justify-center py-6 text-xs text-foreground-muted">No assets</div>
-                    </div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        </div>
+        <ListWallets
+          filteredRows={filteredRows}
+          expandedIds={expandedIds}
+          toggleExpanded={toggleExpanded}
+          getWalletAssets={getWalletAssets}
+          wallets={wallets}
+          setTxModal={setTxModal}
+          setEditWallet={setEditWallet}
+          setArchiveWallet={setArchiveWallet}
+          setDeleteWallet={setDeleteWallet}
+          onSelectWallet={setDetailWallet}
+        />
       )}
       <EditWalletModal open={!!editWallet} wallet={editWallet} onClose={() => setEditWallet(null)} />
       <DeleteWalletModal open={!!deleteWallet} wallet={deleteWallet} onClose={() => setDeleteWallet(null)} />
@@ -456,6 +540,29 @@ export function CardsWallets() {
         wallet={archiveWallet}
         onClose={() => setArchiveWallet(null)}
         onArchived={() => setStatusFilter("archived")}
+      />
+      <AddTransactionModal
+        open={txModal.open}
+        onClose={() => setTxModal(prev => ({ ...prev, open: false }))}
+        initialTab={txModal.tab}
+        initialWalletId={txModal.walletId}
+      />
+      <WalletDetailPanel
+        wallet={detailWallet}
+        balance={detailWallet ? (rows.find(r => r.id === detailWallet.id)?.balance ?? 0) : 0}
+        participation={detailWallet ? (rows.find(r => r.id === detailWallet.id)?.participation ?? 0) : 0}
+        totalBalance={totalBalance}
+        transactions={transactions}
+        holdings={detailWallet ? getWalletAssets(detailWallet.id) : []}
+        onClose={() => setDetailWallet(null)}
+        onEdit={setEditWallet}
+        onArchive={setArchiveWallet}
+        onDelete={setDeleteWallet}
+        onToggleActive={w =>
+          w.status === "active"
+            ? deactivateMutation.mutateAsync(w.id).then(() => setDetailWallet(null))
+            : activateMutation.mutateAsync(w.id).then(() => setDetailWallet(null))
+        }
       />
     </div>
   );

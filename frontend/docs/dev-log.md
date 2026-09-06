@@ -2585,3 +2585,208 @@ npm run build     → ✅ sucesso (1,043 kB com recharts; tsc -b && vite build)
 
 Próximos passos: All Activities tabela com paginação e filtros (All Wallets, All Type, All time) e Skeletons/toasts se necessário.
 ```
+
+---
+
+## 2026-08-31 — Fase 5B-Step6: Add Transaction Modal (Depósito/Retirada/Transfer/Ajuste)
+
+**Fase:** 5 — Wallets (Operações Financeiras)
+
+**Descrição:** Modal único `AddTransactionModal` com 4 abas (ícone+texto na mesma linha) cobrindo `deposito`, `retirada`, `transferência` e `ajuste`. Campos: `transaction type` (4 abas, default deposito, abre na aba clicada), `Wallet & Current Balance` (select + saldo), `asset & amount` (API `market-data/assets/search` + amount 8 casas), `date & time` (2 inputs), `website` opcional (só deposito/retirada, UI-only aguardando backend), `description` opcional, `Count towards goals` (só deposito, default desativado, e ajuste increase), `status` (Completed/Pending/Failed default Completed UI-only). Casos especiais: transferência mostra `From Wallet & To Wallet` + linha de saldos sem label; ajuste mostra `Adjustment Direction` com botões `+ Add / - Remove`. Lida com seleção Wallet/Asset, quantity, countsTowardGoal, validação, loading, erros API, confirmação/sucesso e invalidação de queries.
+
+**Arquivos criados/modificados:**
+
+```text
+frontend/src/features/market-data/api/market-data-api.ts          (novo — searchAssets, convertToUsd)
+frontend/src/features/market-data/api/market-data-queries.ts      (novo — useSearchAssetsQuery, useConvertQuery)
+frontend/src/components/modals/add-transaction.tsx                (implementado — 4 abas, todos campos, casos especiais, auto usdValue)
+frontend/src/pages/wallets-page.tsx                               (wire AddTransactionModal: PageHeader Add Transaction → deposit, initTab)
+frontend/src/pages/Wallets/cards-wallets.tsx                      (wire actions: Deposit/Withdraw/Transfer/Adjust com initialWalletId)
+```
+
+---
+
+### 1. `features/market-data` — `market-data-api.ts` / `market-data-queries.ts`
+
+* `searchAssets(token,q)` → `GET /market-data/assets/search?q=` + `convertToUsd(token,assetId,quantity)` → `GET /market-data/convert?assetId=&quantity=` (rotas reais `backend/src/app.ts:63` e `market-data.routes.ts:11`). Token Clerk via `apiClient`.
+* Hooks: `useSearchAssetsQuery(q, enabled)` (`enabled q.length>=2`, `stale 60s`, key `["market-data","search",q]`) e `useConvertQuery(assetId,quantity, enabled)` (`enabled assetId && quantity>0`, `stale 30s`). Usados para preencher asset e auto-calcular `usdValue`.
+
+### 2. `components/modals/add-transaction.tsx` — `AddTransactionModal`
+
+**Props:** `{open, onClose, initialTab="deposit", initialWalletId?: string}`
+
+**Topo — transaction type:** `grid grid-cols-4 gap-2` 4 botões `flex-col gap-1 rounded-lg border p-3 text-xs` com ícone em cima + texto embaixo (`ArrowDownRight Deposit`, `ArrowUpRight Withdraw`, `ArrowLeftRight Transfer`, `SlidersHorizontal Adjust`) `bg-primary` ativo, senão `bg-surface`. `activeTab` state default `initialTab`; efeito reset ao abrir preenche `initialWalletId` em `walletId/fromWalletId` e limpa demais campos.
+
+**Wallet & Current Balance:**
+
+* Padrão (deposit/withdraw/adjust): `grid grid-cols-2 gap-3` `Select Wallet` (options `useWalletList().wallets` nome+type) + `Current Balance` `div h-10 bg-surface-elevated border tabular-nums` com `formatUSD(balanceMap.get(walletId)??0)` via `useWalletBalances`.
+* **Transferência:** `grid 2` `From Wallet` + `To Wallet` Selects (To filtra != From) e abaixo sem label `grid 2` com 2 balanços lado a lado (sem `Label`).
+* **Ajuste:** `grid 2` `Wallet + Current Balance` + `Adjustment Direction` `grid 2` botões `+ Add` (`Plus`) / `- Remove` (`Minus`) `variant secondary quando active`.
+* Wallet options reusam `wallets` do hook; ícones iguais aos cards (`ArrowDownRight` etc) conforme resposta 3.
+
+**Asset & Amount:** `grid grid-cols-2 gap-3`
+
+* Asset: `Input placeholder Search BTC, ETH...` `value=assetQuery` + dropdown `max-h-32 overflow-auto border` quando `q>=2` mostra `searchQuery.data?.data` (`symbol — name` button seleciona `{externalId,symbol,name}` e seta `assetQuery= symbol - name`). Selecionado mostra `Selected: symbol (externalId) — $usd`.
+* Amount: `Input placeholder 0.00000000` `value=quantityStr` `inputMode decimal` filter regex `[^0-9.,]` e clamp `parts[1].length>8` rejeita, `validateQuantity` (required, >0, max 8 casas). Exibe `USD {usdDisplay}` (`convertQuery.isFetching ? Calculating... : formatUSD(usdValue)`).
+* `usdValue` auto-calculado via `useConvertQuery(selectedAsset.externalId, quantityNum)` — igual resposta 2 (market-data/convert). Submit bloqueia se `usdValue undefined`.
+
+**Date & Time:** `grid grid-cols-2` `Input type=date` (`dateStr` default `toISOString slice 0,10`) + `Input type=time` (`timeStr` default `toTimeString slice 0,5`) combinados em `buildDate() => new Date(\`\${dateStr}T\${timeStr}:00\`).toISOString()`.
+
+**Website opcional:** só `deposit||withdraw` → `Input placeholder https://...` + nota `Awaiting backend — not sent yet.` Guardado local mas não enviado (resposta 1 aguarda backend).
+
+**Description opcional:** `Textarea rows 2` vazia.
+
+**Count towards goals:** `Checkbox` default `false` só `deposit` (e `adjust` quando `direction==="increase"`), conforme `wallet-operation.schema:33,65` (`default false`).
+
+**Status sem label:** `flex gap-2` 3 `Button sm` `Completed|Pending|Failed` `variant secondary quando active` default `Completed`; só UI (awaiting backend) + nota `Status is UI-only awaiting backend.` Não enviado.
+
+**Validação & Submit:**
+
+* `validateQuantity` + `selectedAsset` + `walletId` (ou `from/to`) + `date` + `quantity>0` + `source≠dest` (transferência) + ajuste direction.
+* `buildDate`, `qty=Number(replace comma)`, `usd` do convert.
+* Switch `activeTab`:
+  * deposit → `useDepositMutation({walletId,asset,quantity,qty,usdValue, dateIso, countsTowardGoal, description})`
+  * withdraw → `useWithdrawMutation` (sem counts)
+  * transfer → `useTransferMutation({sourceWalletId, destinationWalletId, asset, quantity, usdValue, dateIso, description})`
+  * adjust → `useAdjustMutation({walletId,asset,quantity,usdValue,direction,dateIso,countsTowardGoal,description})`
+* `isPending` agregado, `serverError` em `Alert danger` (`ApiError.message`), `successMsg` em `Alert success` (`Deposit created successfully.`) + `setTimeout onClose 800ms`. Invalidação automática `walletKeys.all + transactionKeys.all` nos hooks.
+
+### 3. Integração
+
+* `wallets-page.tsx:10` `useState txOpen/txTab` + `Add Transaction Button onClick=>{setTxTab("deposit"); setTxOpen(true)}` + `<AddTransactionModal open={txOpen} onClose=>setTxOpen(false) initialTab={txTab}/>`
+* `cards-wallets.tsx:186` `useState txModal {open,tab,walletId}` + `ActionButtons` agora com `onDeposit/onWithdraw/onTransfer/onAdjust` callbacks (parando propagação) que fazem `setTxModal({open:true,tab:"deposit",walletId:row.id})` etc. Render final `<AddTransactionModal open={txModal.open} onClose=>setTxModal({...open:false}) initialTab={txModal.tab} initialWalletId={txModal.walletId}/>` junto aos modais Edit/Delete/Archive.
+
+**Reuso:** `hooks/useWalletList`, `hooks/useWalletBalances`, `lib/formats formatUSD`, `wallet-operations` schemas/types/api/queries (sem HTTP na UI), `components/ui` (`Dialog, Button, Input, Select, Textarea, Checkbox, Alert`) ícones iguais aos cards.
+
+### Validação
+
+```text
+npm run typecheck → ✅ sucesso
+npm run lint      → ✅ 0 errors, 5 warnings (2 app-header + add-wallets watch + edit-modal watch + add-transaction setState-in-effect)
+npm run build     → ✅ sucesso (1,056 kB; tsc -b && vite build)
+```
+
+### Checklist Fase 5B-Step6
+
+```text
+[ x ] market-data API (searchAssets, convertToUsd) e queries (useSearchAssetsQuery, useConvertQuery)
+[ x ] AddTransactionModal único com 4 tipos na mesma linha ícone+texto embaixo, default deposito, abre na aba clicada com wallet prefilled
+[ x ] Wallet & Current Balance linha (Select + balance) ; Transfer From/To + saldos sem label ; Adjust Direction + Add/-Remove
+[ x ] asset & amount linha: api search criptomoeda + amount 8 casas (clamp) + usdValue auto via market-data/convert + USD display
+[ x ] date & time mesma linha
+[ x ] website opcional só deposito/retirada (UI-only aguardando backend)
+[ x ] description opcional
+[ x ] Count towards goals default false só deposito (e adjust increase)
+[ x ] status sem label 3 botões Completed/Pending/Failed default Completed UI-only
+[ x ] seleção Wallet (Select de wallets existentes) ; seleção Asset (search) ; quantity ; countsTowardGoal ; validação ; loading ; erros API ; confirmação/sucesso ; invalidação queries
+[ x ] casos especiais transferência From/To + saldos ; ajuste Direction + add/remove
+[ x ] ícone iguais aos cards (ArrowDownRight etc)
+[ x ] usdValue auto via market-data/convert
+[ x ] website/status aguardam backend (não enviados)
+[ x ] integrado em wallets-page Add Transaction e cards-wallets ações (initialTab + initialWalletId)
+[ x ] typecheck ✓  lint ✓  build ✓
+```
+
+Próximos passos: All Activities tabela com paginação (All Wallets, All Type, All time) e ajustes de saldo negativo já tratados.
+```
+
+---
+
+## 2026-08-31 — Fix: Asset Selector — coin-logos catalog + separação search/selected/price
+
+**Fase:** 5 — Wallets (Add Transaction)
+
+**Descrição:** Correção do campo Asset do `AddTransactionModal` que misturava `assetQuery` como termo de pesquisa e representação do selecionado (`value={assetQuery}` + `setAssetQuery(\`\${symbol} - \${name}\`)`), causando buscas estranhas a cada tecla, fragilidade e `Failed to search`. Separação em `assetSearchTerm` (termo) ≠ `selectedAsset` (selecionado) ≠ `price/usdValue` (mercado). Pesquisa agora exclusivamente local via catálogo `coin-logos` curado Top 200 market-cap (≈10KB), com `CoinGecko` mantido só para preço.
+
+**Arquivos criados/modificados:**
+
+```text
+frontend/src/features/assets/catalog.ts               (novo — ASSET_CATALOG 200 Top market-cap de CoinGecko markets)
+frontend/src/features/assets/types.ts                 (novo — AssetCatalogEntry, LogoSize)
+frontend/src/features/assets/logo.ts                  (novo — getCoinLogoUrl CDN jsDelivr)
+frontend/src/features/assets/hooks/use-asset-catalog.ts (novo — useAssetCatalogSearch filtro local 20 resultados)
+frontend/src/hooks/use-debounce.ts                    (novo — useDebounce 300ms)
+frontend/src/components/modals/add-transaction.tsx    (refator — assetSearchTerm vs selectedAsset, debounce 300ms, lista local com logos)
+```
+
+---
+
+### 1. Problema identificado
+
+```tsx
+// antes
+const [assetQuery, setAssetQuery] = useState("");
+value={assetQuery}
+onChange={e=>setAssetQuery(e.target.value)}
+onClick=>{ setSelectedAsset({...}); setAssetQuery(`${a.symbol} - ${a.name}`); }
+```
+
+* Mesmo estado para `termo` e `representação` → ao selecionar `BTC - Bitcoin` dispara nova `GET /market-data/assets/search?q=BTC%20-%20Bitcoin` desnecessária, confusão de `enabled q>=2`.
+* Sem `debounce` → cada tecla (`B` → `BT` → `BTC`) dispara request → `marketDataLimiter 30/min` + `CoinGecko 429`.
+* `usdValue` (convert) acoplado à pesquisa → mistura `qual asset?` + `quanto vale?`.
+
+### 2. Arquitetura proposta (aceita)
+
+```text
+Asset Catalog (coin-logos)  ─┐
+                             ├─→ APM SYN Assets →  id/symbol/name/logoUrl
+Market Data (CoinGecko)     ─┘              │
+                                            └─→ price USD (convert)
+```
+
+* `coin-logos` **não substitui** CoinGecko; substitui CoinGecko como **catálogo/seleção**. CoinGecko fica só `price`.
+* Fonte `simplr-sh/coin-logos` 16.119 logos CDN `https://cdn.jsdelivr.net/gh/simplr-sh/coin-logos/images/<id>/<thumb|small|standard|large>.png`, sem rate-limit.
+* Não vendorizar 500MB `images/` nem 8MB `source-with-image-urls.json`; criar camada `features/assets` leve.
+
+### 3. `features/assets` — Asset Catalog
+
+* `catalog.ts` — curado Top 200 por `market_cap_desc` de `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=200` (gerado em `2026-09-01` via `curl`, mapeado `{externalId:id, symbol:upper, name}`): `BTC bitcoin`, `ETH ethereum`, `USDT tether`, `BNB binancecoin`, `XRP ripple`, `USDC usd-coin`, `SOL solana`, ... 200 itens `as const` (~10KB gz).
+* `types.ts` — `AssetCatalogEntry {externalId,symbol,name}` + `LogoSize thumb|small|standard|large`
+* `logo.ts` — `getCoinLogoUrl(id,size="standard")` → `` `${CDN_BASE}/${encodeURIComponent(id)}/${size}.png"` `` + `LOGO_SIZE_PX`. Fallback `onError hidden` no `<img>`.
+* `hooks/use-asset-catalog.ts` — `useAssetCatalogSearch(query)` memo filtra `ASSET_CATALOG` onde `symbol|name|externalId includes lower(query)` slice 20, `query<2 → []`. **Exclusivamente local** conforme resposta 2 (sem `useSearchAssetsQuery` remoto).
+
+### 4. `hooks/use-debounce.ts`
+
+* `useDebounce<T>(value,delay)` com `setTimeout/clearTimeout` → `debounced` após `300ms`. Usado para `assetSearchTerm → debouncedTerm` antes de filtrar catálogo.
+
+### 5. `components/modals/add-transaction.tsx` — Refator
+
+* Estados: `const [assetSearchTerm,setAssetSearchTerm]=useState("")` + `const debouncedTerm=useDebounce(assetSearchTerm,300)` + `const catalogResults=useAssetCatalogSearch(selectedAsset?"":debouncedTerm)` + `selectedAsset` separado.
+* `Input value={assetSearchTerm} onChange=>{setAssetSearchTerm(e.target.value); if(selectedAsset) setSelectedAsset(null)}` — digitar limpa seleção.
+* Dropdown só quando `debouncedTerm.length>=2` → `max-h-40 overflow-auto border`: `catalogResults.length===0 ? No results` : `catalogResults.map(a=> <button key={a.externalId} onClick=>{setSelectedAsset({externalId,symbol,name}); setAssetSearchTerm("")}> <img src={getCoinLogoUrl(a.externalId,"thumb")} /> {symbol} — {name}</button>)`
+* **Bloco selecionado separado:**
+```
+Selected asset
+┌──────────────────────────────────┐
+│ [logo] BTC · Bitcoin         ✓   │
+│        bitcoin                   │
+└──────────────────────────────────┘
+USD $104,532.12  [ Change asset ]
+```
+Com `logo thumb 20px`, `externalId` sub, `✓` verde e botão `Change asset` que faz `setSelectedAsset(null); setAssetSearchTerm("")`.
+* **Preço separado:** `useConvertQuery(selectedAsset.externalId, quantityNum)` só depende de `selectedAsset` + `quantity`, não de `searchTerm`. `usdDisplay` exibido no bloco selecionado e abaixo de `Amount`.
+* Mantém `wallet & balance`, `transfer`/`adjust` casos, `date/time`, `website`/`status` UI-only, validações e mutações.
+
+### Validação
+
+```text
+npm run typecheck → ✅ sucesso
+npm run lint      → ✅ 0 errors, 5 warnings (2 app-header + 2 add-wallets watch + setState-in-effect)
+npm run build     → ✅ sucesso (1,069 kB; tsc -b && vite build)
+```
+
+### Checklist Fix Asset
+
+```text
+[ x ] catalog.ts 200 Top market-cap com externalId compatível CoinGecko
+[ x ] logo.ts getCoinLogoUrl CDN jsDelivr com encodeURIComponent
+[ x ] hooks/use-asset-catalog.ts filtro local 20 resultados, q>=2, só local
+[ x ] hooks/use-debounce.ts 300ms
+[ x ] assetSearchTerm ≠ selectedAsset (setAssetSearchTerm("") no select)
+[ x ] dropdown local com logo thumb + symbol — name + Change asset
+[ x ] pesquisa exclusivamente local (sem GET /market-data/assets/search)
+[ x ] preço CoinGecko mantido só para usdValue (convert)
+[ x ] Não mistura pesquisa/seleção/preço
+[ x ] typecheck ✓  lint ✓  build ✓
+```
+```
