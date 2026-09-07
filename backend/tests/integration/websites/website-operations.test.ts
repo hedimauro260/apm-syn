@@ -141,7 +141,7 @@ describe("Website Operations — Integration", () => {
       expect(result.quantity).toBe(3);
     });
 
-    it("should reduce website balance", async () => {
+    it("should reduce website balance in USD", async () => {
       const key = new mongoose.Types.ObjectId().toString();
       await websiteOpsService.withdrawFromWebsite(
         String(user._id),
@@ -158,10 +158,33 @@ describe("Website Operations — Integration", () => {
 
       const balance = await WebsiteAssetBalanceModel.findOne({
         websiteId: website._id,
-        assetExternalId: "bitcoin",
+        assetExternalId: "usd",
       }).exec();
 
-      expect(balance!.balance).toBe(7);
+      expect(balance!.balance).toBe(350000);
+    });
+
+    it("should allow withdrawal when USD balance covers the amount", async () => {
+      const key = new mongoose.Types.ObjectId().toString();
+      await websiteOpsService.withdrawFromWebsite(
+        String(user._id),
+        String(website._id),
+        {
+          walletId: String(wallet._id),
+          asset: btcAsset,
+          quantity: 1,
+          usdValue: 100000,
+          date: new Date(),
+        },
+        key
+      );
+
+      const balance = await WebsiteAssetBalanceModel.findOne({
+        websiteId: website._id,
+        assetExternalId: "usd",
+      }).exec();
+
+      expect(balance!.balance).toBe(400000);
     });
 
     it("should increase wallet balance", async () => {
@@ -186,7 +209,7 @@ describe("Website Operations — Integration", () => {
       expect(walletBalance).toBe(3);
     });
 
-    it("should reject withdrawal with insufficient website balance", async () => {
+    it("should reject withdrawal when USD exceeds website balance", async () => {
       const key = new mongoose.Types.ObjectId().toString();
       await expect(
         websiteOpsService.withdrawFromWebsite(
@@ -195,8 +218,8 @@ describe("Website Operations — Integration", () => {
           {
             walletId: String(wallet._id),
             asset: btcAsset,
-            quantity: 20,
-            usdValue: 1000000,
+            quantity: 1,
+            usdValue: 600000,
             date: new Date(),
           },
           key

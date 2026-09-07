@@ -1,14 +1,18 @@
+import mongoose from "mongoose";
 import { WebsiteModel, type IWebsite } from "../models/website.model.js";
 import { paginate, type PaginatedResult } from "../shared/utils/pagination.js";
 
-export async function create(data: {
-  userId: string;
-  name: string;
-  url?: string;
-  description?: string;
-}): Promise<IWebsite> {
+export async function create(
+  data: {
+    userId: string;
+    name: string;
+    url?: string;
+    description?: string;
+  },
+  session?: mongoose.ClientSession
+): Promise<IWebsite> {
   const website = new WebsiteModel(data);
-  return website.save();
+  return session ? website.save({ session }) : website.save();
 }
 
 export async function findById(id: string): Promise<IWebsite | null> {

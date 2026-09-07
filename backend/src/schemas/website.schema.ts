@@ -14,6 +14,7 @@ export const createWebsiteSchema = z
     name: z.string().trim().min(1, "Name is required").max(80),
     url: httpUrlSchema.optional(),
     description: z.string().trim().max(500).optional(),
+    initialBalance: z.coerce.number().nonnegative().default(0),
   })
   .strip();
 

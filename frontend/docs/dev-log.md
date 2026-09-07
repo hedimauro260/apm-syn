@@ -2790,3 +2790,161 @@ npm run build     → ✅ sucesso (1,069 kB; tsc -b && vite build)
 [ x ] typecheck ✓  lint ✓  build ✓
 ```
 ```
+
+---
+
+## 2026-09-07 — Fase 8A: Websites Foundation (Types + API + Queries + Mutations)
+
+**Fase:** 8 — Websites
+
+**Descrição:** Criação da fundação frontend da feature Websites: tipos, contratos da API, schemas Zod, query keys, queries TanStack Query e mutations TanStack Query para CRUD completo + lifecycle (archive). Nenhum componente UI ou modal implementado — apenas a camada de dados, idêntica ao padrão estabelecido em `features/wallets/`.
+
+**Backend inspecionado:**
+
+```text
+POST   /api/v1/websites              → create    (body: name, url?, description?)  → 201 { data }
+GET    /api/v1/websites              → list      (query: page, limit, sort, status?) → 200 { data[], pagination }
+GET    /api/v1/websites/:websiteId   → get       → 200 { data }
+PATCH  /api/v1/websites/:websiteId   → update    (body: name?, url?, description?) → 200 { data }
+POST   /api/v1/websites/:websiteId/archive → archive  → 200 { data }
+DELETE /api/v1/websites/:websiteId   → delete    → 204 (no body)
+```
+
+Nota: não existe endpoint `activate` para websites (diferente de wallets que têm activate/deactivate). O único lifecycle é `archive`.
+
+**Arquivos criados:**
+
+```text
+frontend/src/features/websites/types/website.types.ts
+frontend/src/features/websites/schemas/website.schema.ts
+frontend/src/features/websites/api/website-api.ts
+frontend/src/features/websites/api/website-queries.ts
+```
+
+**Arquivos modificados:** nenhum.
+
+---
+
+### 1. `features/websites/types/website.types.ts`
+
+```ts
+WebsiteStatus = "active" | "archived"
+
+Website {
+  id: string
+  userId: string
+  name: string
+  url?: string
+  description?: string
+  status: WebsiteStatus
+  createdAt: string
+  updatedAt: string
+}
+
+WEBSITE_STATUSES: WebsiteStatus[]
+
+CreateWebsiteInput { name, url?, description? }
+UpdateWebsiteInput { name?, url?, description? }
+WebsiteListParams  { page?, limit?, sort?, status? }
+```
+
+Reflete o contrato real de `toWebsiteResponse` em `backend/src/services/website.service.ts`. Backend converte `_id` → `id`; frontend nunca vê `_id`. Sem campos inventados.
+
+### 2. `features/websites/schemas/website.schema.ts`
+
+Schemas Zod para validação de formulário (não substitui validação backend):
+
+```text
+websiteStatusSchema   → z.enum(["active","archived"])
+createWebsiteSchema   → { name: min(1).max(80), url?: http/refine/transform, description?: max(500) } .strip()
+updateWebsiteSchema   → mesmos campos optional + refine ≥1 field
+websiteListQuerySchema→ { page, limit, sort, status? } .strip()
+```
+
+URL validation: regex `^https?:\/\/.+"` com transform empty→undefined (igual backend `httpUrlSchema`). `.strip()` remove campos extras.
+
+### 3. `features/websites/api/website-api.ts`
+
+Camada HTTP pura via `apiClient` centralizado:
+
+```text
+getWebsites(token, params?)    → GET  /websites[?...]  → PaginatedResponse<Website>
+getWebsite(token, id)          → GET  /websites/:id     → Website  (unwrap .data)
+createWebsite(token, body)     → POST /websites         → Website  (unwrap .data)
+updateWebsite(token, id, body) → PATCH /websites/:id    → Website  (unwrap .data)
+archiveWebsite(token, id)      → POST /websites/:id/archive → Website (unwrap .data)
+deleteWebsite(token, id)       → DELETE /websites/:id   → void
+```
+
+`buildWebsiteQuery` com `URLSearchParams` para page/limit/sort/status. List retorna `PaginatedResponse` direto; single retorna `ApiResponse` e faz `.data` unwrap. DELETE retorna `Promise<void>` (204).
+
+### 4. `features/websites/api/website-queries.ts`
+
+TanStack Query + query keys:
+
+```text
+websiteKeys = {
+  all:    ["websites"],
+  list:   (params?) => ["websites", "list", params],
+  detail: (id)      => ["websites", "detail", id],
+}
+```
+
+Queries:
+```text
+useWebsitesQuery(params?)  → GET lista (key: list)
+useWebsiteQuery(id)        → GET detalhe (key: detail, enabled: !!id)
+```
+
+Mutations:
+```text
+useCreateWebsiteMutation()       → POST, invalida websiteKeys.all
+useUpdateWebsiteMutation()       → PATCH, invalida detail(id) + all
+useArchiveWebsiteMutation()      → POST archive, invalida detail(id) + all
+useDeleteWebsiteMutation()       → DELETE, invalida websiteKeys.all
+```
+
+`getAuthToken()` helper idêntico ao de wallets. Token via `useAuth().getToken()`. Invalidation padrão: create/delete → all; update/archive → detail + all. Nenhum `fetch` espalhado na UI.
+
+### Decisões relevantes
+
+1. **Sem `activate` endpoint** — backend não suporta; wallets têm activate/deactivate, websites somente archive.
+2. **Sem `description` no schema frontend na lista** — apenas create/update; list params não incluem description.
+3. **Schemas idênticos ao backend** — `httpUrlSchema` com refine+transform replicado no frontend para UX.
+4. **4 arquivos, sem hooks/ directory** — wallets não tem `hooks/` directory; queries ficam em `api/` seguindo o padrão existente.
+5. **Sem barrel exports** — consumo via deep imports diretos (consistente com wallets).
+
+### Validação
+
+```text
+npm run typecheck → ✅ sucesso (0 errors)
+npm run lint      → ✅ 0 errors (7 warnings pre-existentes em outros arquivos)
+npm run build     → ✅ sucesso (1,157 kB; tsc -b && vite build)
+```
+
+### Checklist Fase 8A
+
+```text
+[ x ] feature websites criada (features/websites/)
+[ x ] tipos criados (Website, WebsiteStatus, CreateWebsiteInput, UpdateWebsiteInput, WebsiteListParams)
+[ x ] WebsiteStatus = "active" | "archived" (confirmado backend)
+[ x ] inputs criados (CreateWebsiteInput, UpdateWebsiteInput)
+[ x ] list params criados (WebsiteListParams)
+[ x ] schemas Zod criados (createWebsiteSchema, updateWebsiteSchema, websiteListQuerySchema)
+[ x ] API criada (6 endpoints: create, list, get, update, archive, delete)
+[ x ] CRUD conectado aos endpoints reais
+[ x ] lifecycle conectado (archive — único disponível no backend)
+[ x ] query keys padronizadas (websiteKeys.all/list/detail)
+[ x ] queries TanStack Query criadas (useWebsitesQuery, useWebsiteQuery)
+[ x ] mutations criadas (create, update, archive, delete)
+[ x ] invalidação configurada (all prefix + detail específico)
+[ x ] nenhuma lógica HTTP na UI
+[ x ] nenhuma regra financeira duplicada
+[ x ] nenhuma Transaction criada diretamente
+[ x ] consistência com Wallets (nomenclatura, padrão, estrutura)
+[ x ] npm run typecheck ✓
+[ x ] npm run lint ✓
+[ x ] npm run build ✓
+```
+
+---

@@ -75,16 +75,14 @@ export async function findAllByUser(
     .exec() as unknown as Promise<ITransaction[]>;
 }
 
-export async function getWebsiteAssetBalance(
+export async function getWebsiteUsdBalance(
   websiteId: string,
-  assetExternalId: string,
   session?: unknown
 ): Promise<number> {
   const query = TransactionModel.find({
-    "asset.externalId": assetExternalId,
     $or: [{ "source.id": websiteId }, { "destination.id": websiteId }],
   })
-    .select("source destination quantity")
+    .select("source destination usdValue")
     .limit(BALANCE_QUERY_LIMIT)
     .lean();
   if (session) (query as unknown as { session: (s: unknown) => unknown }).session(session);
@@ -94,13 +92,13 @@ export async function getWebsiteAssetBalance(
   for (const doc of docs as unknown as Array<{
     source: { type: string; id?: unknown };
     destination: { type: string; id?: unknown };
-    quantity: number;
+    usdValue: number;
   }>) {
     const sourceId = doc.source?.id ? String(doc.source.id) : null;
     const destId = doc.destination?.id ? String(doc.destination.id) : null;
     const wid = String(websiteId);
-    if (destId === wid) balance += doc.quantity;
-    if (sourceId === wid) balance -= doc.quantity;
+    if (destId === wid) balance += doc.usdValue;
+    if (sourceId === wid) balance -= doc.usdValue;
   }
   return balance;
 }

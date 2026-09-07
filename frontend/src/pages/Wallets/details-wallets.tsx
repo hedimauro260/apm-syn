@@ -67,7 +67,7 @@ function formatDateTime(dateStr: string): string {
   });
 }
 
-function getTxLabel(type: Transaction["type"]): string {
+function getTxLabel(type: Transaction["type"], isInbound: boolean): string {
   switch (type) {
     case "WALLET_DEPOSIT":
       return "Deposit";
@@ -80,20 +80,25 @@ function getTxLabel(type: Transaction["type"]): string {
     case "WEBSITE_EARNING":
       return "Earning";
     case "WEBSITE_WITHDRAWAL":
-      return "Withdrawal";
+      return isInbound ? "From website" : "Withdrawal";
     default:
       return type;
   }
 }
 
-function getTxIcon(type: Transaction["type"]) {
+function getTxIcon(type: Transaction["type"], isInbound: boolean) {
   switch (type) {
     case "WALLET_DEPOSIT":
     case "WEBSITE_EARNING":
       return <ArrowDownRight size={12} strokeWidth={1.5} className="text-success" />;
     case "WALLET_WITHDRAWAL":
-    case "WEBSITE_WITHDRAWAL":
       return <ArrowUpRight size={12} strokeWidth={1.5} className="text-danger" />;
+    case "WEBSITE_WITHDRAWAL":
+      return isInbound ? (
+        <ArrowDownRight size={12} strokeWidth={1.5} className="text-success" />
+      ) : (
+        <ArrowUpRight size={12} strokeWidth={1.5} className="text-danger" />
+      );
     case "WALLET_TRANSFER":
       return <ArrowLeftRight size={12} strokeWidth={1.5} className="text-info" />;
     case "WALLET_ADJUSTMENT":
@@ -346,10 +351,10 @@ function HistoryTab({ transactions, walletId }: { transactions: Transaction[]; w
             className="flex items-center gap-3 p-3 rounded-lg border border-border bg-surface-elevated"
           >
             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-surface border border-border shrink-0">
-              {getTxIcon(tx.type)}
+              {getTxIcon(tx.type, isInbound)}
             </span>
             <div className="flex flex-col min-w-0 flex-1">
-              <span className="text-xs font-medium text-foreground truncate">{getTxLabel(tx.type)}</span>
+              <span className="text-xs font-medium text-foreground truncate">{getTxLabel(tx.type, isInbound)}</span>
               <span className="text-[10px] text-foreground-muted truncate">
                 {tx.asset.symbol} · {formatDateTime(tx.date)}
               </span>

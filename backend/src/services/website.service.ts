@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { ConflictError, ForbiddenError, NotFoundError } from "../utils/errors.js";
 import * as websiteRepository from "../repositories/website.repository.js";
 import { TransactionModel } from "../models/transaction.model.js";
+import { WebsiteAssetBalanceModel } from "../models/website-asset-balance.model.js";
 import type { IWebsite } from "../models/website.model.js";
 import { buildFilterObject } from "../shared/utils/filter.js";
 import { buildSortObject } from "../shared/utils/sort.js";
@@ -30,13 +31,58 @@ export async function createWebsite(
       "WEBSITE_NAME_ALREADY_EXISTS",
       `Website with name "${data.name}" already exists`
     );
-  const website = await websiteRepository.create({
-    userId,
-    name: data.name,
-    url: data.url,
-    description: data.description,
-  });
-  return toWebsiteResponse(website);
+
+  const initialBalance = data.initialBalance ?? 0;
+  const session = await mongoose.startSession();
+
+  try {
+    let website: IWebsite | null = null;
+    await session.withTransaction(async () => {
+      website = await websiteRepository.create(
+        {
+          userId,
+          name: data.name,
+          url: data.url,
+          description: data.description,
+        },
+        session
+      );
+
+      if (initialBalance > 0 && website) {
+        await WebsiteAssetBalanceModel.findOneAndUpdate(
+          {
+            websiteId: website._id,
+            assetExternalId: "usd",
+          },
+          { $inc: { balance: initialBalance } },
+          { upsert: true, new: true, session }
+        ).exec();
+
+        await TransactionModel.create(
+          [
+            {
+              userId: new mongoose.Types.ObjectId(userId),
+              type: "WEBSITE_EARNING",
+              source: { type: "EXTERNAL" },
+              destination: { type: "WEBSITE", id: website._id },
+              asset: { externalId: "usd", symbol: "USD", name: "US Dollar" },
+              quantity: initialBalance,
+              usdValue: initialBalance,
+              countsTowardGoal: false,
+              date: new Date(),
+              description: "Initial balance",
+            },
+          ],
+          { session: session as unknown as undefined }
+        );
+      }
+    });
+
+    if (!website) throw new NotFoundError("Website");
+    return toWebsiteResponse(website);
+  } finally {
+    await session.endSession();
+  }
 }
 
 export async function getWebsite(

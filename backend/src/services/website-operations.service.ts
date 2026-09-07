@@ -286,34 +286,33 @@ export async function withdrawFromWebsite(
       const updated = await WebsiteAssetBalanceModel.findOneAndUpdate(
         {
           websiteId: new mongoose.Types.ObjectId(websiteId),
-          assetExternalId: data.asset.externalId,
-          balance: { $gte: data.quantity },
+          assetExternalId: "usd",
+          balance: { $gte: data.usdValue },
         },
-        { $inc: { balance: -data.quantity } },
+        { $inc: { balance: -data.usdValue } },
         { new: true, session: session as never }
       ).exec();
 
       if (!updated) {
-        const current = await WebsiteAssetBalanceModel.findOne({
-          websiteId: new mongoose.Types.ObjectId(websiteId),
-          assetExternalId: data.asset.externalId,
-        })
-          .session(session as never)
-          .lean()
-          .exec();
-        let available = current?.balance ?? 0;
-        if (!current) {
-          available = await transactionRepository.getWebsiteAssetBalance(
-            websiteId,
-            data.asset.externalId,
-            session
-          );
+        const available = await transactionRepository.getWebsiteUsdBalance(
+          websiteId,
+          session
+        );
+        if (data.usdValue > available) {
+          throw new AppError(422, "INSUFFICIENT_BALANCE", "Insufficient website balance", {
+            asset: "usd",
+            available,
+            requested: data.usdValue,
+          });
         }
-        throw new AppError(422, "INSUFFICIENT_BALANCE", "Insufficient website balance", {
-          asset: data.asset.externalId,
-          available,
-          requested: data.quantity,
-        });
+        await WebsiteAssetBalanceModel.findOneAndUpdate(
+          {
+            websiteId: new mongoose.Types.ObjectId(websiteId),
+            assetExternalId: "usd",
+          },
+          { $set: { balance: available - data.usdValue } },
+          { upsert: true, new: true, session: session as never }
+        ).exec();
       }
 
       const toParticipant = (p: { type: string; id?: string }) => ({
