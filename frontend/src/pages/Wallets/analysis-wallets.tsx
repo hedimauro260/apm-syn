@@ -4,6 +4,7 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { subDays, isWithinInterval, parseISO } from "date-fns";
 import { useWalletsQuery } from "@/features/wallets/api/wallet-queries";
 import { useTransactionsQuery } from "@/features/transactions/api/transaction-queries";
+import { useWalletBalances } from "@/hooks/use-wallet-balances";
 import { LoadingState } from "@/components/ui/loading-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -266,36 +267,19 @@ export function AnalysisWallets() {
   const wallets = useMemo(() => walletsQuery.data?.data ?? [], [walletsQuery.data]);
   const transactions = useMemo(() => transactionsQuery.data?.data ?? [], [transactionsQuery.data]);
 
-  const { participationData, totalBalance } = useMemo(() => {
-    const balances = new Map<string, number>();
-    for (const w of wallets) balances.set(w.id, 0);
-    for (const tx of transactions) {
-      const destId = tx.destination.type === "WALLET" ? tx.destination.id : undefined;
-      const srcId = tx.source.type === "WALLET" ? tx.source.id : undefined;
-      if (destId && balances.has(destId)) balances.set(destId, (balances.get(destId) ?? 0) + tx.usdValue);
-      if (srcId && balances.has(srcId)) balances.set(srcId, (balances.get(srcId) ?? 0) - tx.usdValue);
-    }
-    let total = 0;
-    for (const v of balances.values()) if (v > 0) total += v;
-    if (total === 0) {
-      let alt = 0;
-      for (const tx of transactions) {
-        if (tx.destination.type === "WALLET") alt += tx.usdValue;
-        if (tx.source.type === "WALLET") alt -= tx.usdValue;
-      }
-      total = alt > 0 ? alt : 0;
-    }
-    const entries: ChartEntry[] = wallets
-      .map((w, idx) => ({
-        id: w.id,
-        name: w.name,
-        value: Math.max(0, balances.get(w.id) ?? 0),
-        color: normalizeColor(w.color, idx),
+  const { rows: walletRows, totalBalance } = useWalletBalances(wallets, transactions);
+
+  const participationData = useMemo(() => {
+    return walletRows
+      .map(r => ({
+        id: r.id,
+        name: r.name,
+        value: Math.max(0, r.balance),
+        color: r.color,
       }))
       .filter(e => e.value > 0)
       .sort((a, b) => b.value - a.value);
-    return { participationData: entries, totalBalance: total };
-  }, [wallets, transactions]);
+  }, [walletRows]);
 
   const inflows6 = useMemo(() => {
     const from = subDays(new Date(), 6);

@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { normalizeColor } from "@/lib/wallet-utils";
+import { useAssetHoldings } from "./use-asset-holdings";
 
 interface WalletRow {
   id: string;
@@ -21,29 +22,26 @@ export function useWalletBalances(
   wallets: any[],
   transactions: any[],
 ): UseWalletBalancesResult {
+  const holdings = useAssetHoldings(transactions);
+
   return useMemo(() => {
     const balances = new Map<string, number>();
     for (const w of wallets) balances.set(w.id, 0);
-    for (const tx of transactions) {
-      const destId = tx.destination.type === "WALLET" ? tx.destination.id : undefined;
-      const srcId = tx.source.type === "WALLET" ? tx.source.id : undefined;
-      if (destId && balances.has(destId)) balances.set(destId, (balances.get(destId) ?? 0) + tx.usdValue);
-      if (srcId && balances.has(srcId)) balances.set(srcId, (balances.get(srcId) ?? 0) - tx.usdValue);
-    }
 
-    let negative = false;
-    for (const v of balances.values()) if (v < 0) negative = true;
+    const negativeWallets = new Set<string>();
+    for (const held of holdings.values()) {
+      for (const walletId of held.negativeWallets) {
+        if (balances.has(walletId)) negativeWallets.add(walletId);
+      }
+      for (const [walletId, quantity] of held.perWallet) {
+        if (!balances.has(walletId)) continue;
+        const value = held.priceUsd != null ? quantity * held.priceUsd : 0;
+        balances.set(walletId, (balances.get(walletId) ?? 0) + value);
+      }
+    }
 
     let total = 0;
     for (const v of balances.values()) if (v > 0) total += v;
-    if (total === 0) {
-      let alt = 0;
-      for (const tx of transactions) {
-        if (tx.destination.type === "WALLET") alt += tx.usdValue;
-        if (tx.source.type === "WALLET") alt -= tx.usdValue;
-      }
-      total = alt > 0 ? alt : 0;
-    }
 
     const list: WalletRow[] = wallets
       .map((w, idx) => {
@@ -61,6 +59,6 @@ export function useWalletBalances(
       })
       .sort((a, b) => b.balance - a.balance);
 
-    return { rows: list, hasNegative: negative, totalBalance: total };
-  }, [wallets, transactions]);
+    return { rows: list, hasNegative: negativeWallets.size > 0, totalBalance: total };
+  }, [wallets, holdings]);
 }

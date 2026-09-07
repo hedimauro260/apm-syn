@@ -70,6 +70,8 @@
   --color-info: #0284c7;
   --color-info-hover: #0369a1;
   --color-info-foreground: #ffffff;
+
+  --animate-marquee: marquee 25s linear infinite;
 }
 
 /* ============================================
@@ -261,5 +263,14 @@ aside nav::-webkit-scrollbar {
   }
   to {
     width: 0%;
+  }
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
   }
 }

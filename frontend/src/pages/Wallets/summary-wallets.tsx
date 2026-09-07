@@ -3,6 +3,7 @@ import { startOfWeek, isWithinInterval, parseISO } from "date-fns";
 import { BarChart, Bar, Cell, XAxis, YAxis, ReferenceLine, ResponsiveContainer } from "recharts";
 import { useWalletsQuery } from "@/features/wallets/api/wallet-queries";
 import { useTransactionsQuery } from "@/features/transactions/api/transaction-queries";
+import { useWalletBalances } from "@/hooks/use-wallet-balances";
 import { LoadingState } from "@/components/ui/loading-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { Button } from "@/components/ui/button";
@@ -82,6 +83,11 @@ export function SummaryWallets() {
   const walletsQuery = useWalletsQuery({ limit: 100 });
   const transactionsQuery = useTransactionsQuery({ limit: 100, sort: "-date" });
 
+  const wallets = walletsQuery.data?.data ?? [];
+  const transactions = transactionsQuery.data?.data ?? [];
+
+  const { totalBalance } = useWalletBalances(wallets, transactions);
+
   const isLoading = walletsQuery.isLoading || transactionsQuery.isLoading;
   const isError = walletsQuery.isError || transactionsQuery.isError;
 
@@ -113,10 +119,7 @@ export function SummaryWallets() {
     );
   }
 
-  const wallets = walletsQuery.data?.data ?? [];
   const walletCount = walletsQuery.data?.pagination?.total ?? wallets.length;
-
-  const transactions = transactionsQuery.data?.data ?? [];
   const totalTransactions = transactionsQuery.data?.pagination?.total ?? transactions.length;
 
   let totalInflows = 0;
@@ -142,8 +145,6 @@ export function SummaryWallets() {
     if (tx.source.type === "WALLET") value -= tx.usdValue;
     return { date: tx.date, value };
   });
-
-  const balance = totalInflows - totalOutflows;
 
   const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
   const now = new Date();
@@ -171,7 +172,7 @@ export function SummaryWallets() {
       <SummaryCard
         icon={Wallet}
         label="Total Balance"
-        value={formatUSD(balance)}
+        value={formatUSD(totalBalance)}
         secondaryText={`Across ${walletCount} ${walletCount === 1 ? "wallet" : "wallets"}`}
         chartData={balanceChart.chartData}
         maxChartValue={balanceChart.maxChartValue}

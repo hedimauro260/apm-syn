@@ -60,6 +60,7 @@ export function AddTransactionModal({ open, onClose, initialTab = "deposit", ini
   const [adjustDirection, setAdjustDirection] = useState<"increase" | "decrease">("increase");
   const [selectedAsset, setSelectedAsset] = useState<AssetInput | null>(null);
   const [quantityStr, setQuantityStr] = useState("");
+  const [customPriceRate, setCustomPriceRate] = useState<string>("");
   const [dateStr, setDateStr] = useState(() => new Date().toISOString().slice(0, 10));
   const [timeStr, setTimeStr] = useState(() => new Date().toTimeString().slice(0, 5));
   const [website, setWebsite] = useState("");
@@ -90,8 +91,24 @@ export function AddTransactionModal({ open, onClose, initialTab = "deposit", ini
   // usdValue derived from convert (market-data) else 0 until loaded
   const usdValue = convertQuery.data?.data?.usdValue ?? 0;
 
+  const effectiveUsdValue = useMemo(() => {
+    if (customPriceRate && validQuantity && quantityNum > 0) {
+      const rate = Number(customPriceRate.replace(",", "."));
+      if (!isNaN(rate) && rate > 0) {
+        return rate * quantityNum;
+      }
+    }
+    return usdValue;
+  }, [customPriceRate, validQuantity, quantityNum, usdValue]);
+
   // Keep derived usdValue display
-  const usdDisplay = convertQuery.isFetching ? "Calculating..." : validQuantity && selectedAsset ? formatUSD(usdValue || 0) : "$0.00";
+  const usdDisplay = convertQuery.isFetching ? "Calculating..." : validQuantity && selectedAsset ? formatUSD(effectiveUsdValue || 0) : "$0.00";
+
+  useEffect(() => {
+    if (validQuantity && selectedAsset && usdValue > 0 && quantityNum > 0 && !customPriceRate) {
+      setCustomPriceRate((usdValue / quantityNum).toFixed(2));
+    }
+  }, [selectedAsset, selectedAsset?.externalId, usdValue, validQuantity, customPriceRate, quantityNum]);
 
   useEffect(() => {
     if (open) {
@@ -103,6 +120,7 @@ export function AddTransactionModal({ open, onClose, initialTab = "deposit", ini
       setAdjustDirection("increase");
       setSelectedAsset(null);
       setQuantityStr("");
+      setCustomPriceRate("");
       setWebsite("");
       setDescription("");
       setCountsTowardGoal(false);
@@ -146,8 +164,15 @@ export function AddTransactionModal({ open, onClose, initialTab = "deposit", ini
       return;
     }
     const qty = Number(quantityStr.replace(",", "."));
-    const usd = convertQuery.data?.data?.usdValue;
-    if (usd === undefined || usd === null) {
+    let usd = effectiveUsdValue;
+    if (customPriceRate) {
+      const rate = Number(customPriceRate.replace(",", "."));
+      if (isNaN(rate) || rate <= 0) {
+        toast.error("Invalid rate", "Enter a valid price rate.");
+        return;
+      }
+      usd = rate * qty;
+    } else if (usd === undefined || usd === null) {
       toast.error("USD value unavailable", "USD value not available. Try again.");
       return;
     }
@@ -265,9 +290,8 @@ export function AddTransactionModal({ open, onClose, initialTab = "deposit", ini
           {([1, 2, 3] as WizardStep[]).map(s => (
             <div key={s} className="flex-1 flex flex-col gap-1">
               <div
-                className={`h-1.5 rounded-full transition-colors ${
-                  s <= step ? "bg-primary" : "bg-border"
-                }`}
+                className={`h-1.5 rounded-full transition-colors ${s <= step ? "bg-primary" : "bg-border"
+                  }`}
               />
               <span className={`text-[10px] text-center ${s === step ? "text-foreground" : "text-foreground-muted"}`}>
                 {STEP_LABELS[s]}
@@ -376,6 +400,20 @@ export function AddTransactionModal({ open, onClose, initialTab = "deposit", ini
                 />
                 <p className="text-[10px] text-foreground-muted">Max 8 decimals · USD {usdDisplay}</p>
               </div>
+              <div className="flex flex-col gap-1.5">
+                <Label>Price rate (USD per unit)</Label>
+                <Input
+                  placeholder="0.00"
+                  value={customPriceRate}
+                  onChange={e => {
+                    const v = e.target.value.replace(/[^0-9.,]/g, "");
+                    const parts = v.replace(",", ".").split(".");
+                    if (parts[1] && parts[1].length > 8) return;
+                    setCustomPriceRate(v);
+                  }}
+                  inputMode="decimal"
+                />
+              </div>
             </div>
 
             <div className="flex justify-between pt-2">
@@ -413,6 +451,7 @@ export function AddTransactionModal({ open, onClose, initialTab = "deposit", ini
                 <span className="text-foreground-muted">Amount</span>
                 <span className="font-medium tabular-nums">
                   {quantityStr || "0"} · {usdDisplay}
+                  {customPriceRate ? ` @ $${Number(customPriceRate.replace(",", ".")).toFixed(2)}/unit` : ""}
                 </span>
               </div>
             </div>
