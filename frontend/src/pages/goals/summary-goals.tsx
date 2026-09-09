@@ -1,5 +1,5 @@
 import type { ElementType } from "react";
-import { Target, TrendingUp, Hourglass, Flame } from "lucide-react";
+import { Target, TrendingUp, Hourglass, Flame, Check, X } from "lucide-react";
 import { useGoals } from "./use-goals";
 import { LoadingState } from "@/components/ui/loading-state";
 import { ErrorState } from "@/components/ui/error-state";
@@ -11,7 +11,7 @@ interface SummaryCardProps {
   iconClassName?: string;
   label: string;
   value: string;
-  secondaryText: string;
+  secondaryText?: string;
 }
 
 function SummaryCard({
@@ -35,6 +35,42 @@ function SummaryCard({
         </div>
       </div>
       <p className="text-[10px] text-foreground-secondary min-h-3">{secondaryText}</p>
+    </div>
+  );
+}
+
+function DaysElapsedCard({ createdAt }: { createdAt: string }) {
+  const msPerDay = 1000 * 60 * 60 * 24;
+  const diffMs = Date.now() - new Date(createdAt).getTime();
+  const daysElapsed = Math.min(7, Math.max(1, Math.ceil(diffMs / msPerDay)));
+
+  return (
+    <div className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-4">
+      <div className="flex items-center gap-3">
+        <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-elevated border border-border">
+          <Flame className="h-4 w-4 text-foreground-muted" />
+        </span>
+        <div className="flex flex-col gap-1">
+          <span className="text-[10px] font-medium text-foreground-muted">Days Elapsed</span>
+          <span className="text-base font-semibold tabular-nums text-foreground tracking-tight">
+            {daysElapsed} {daysElapsed === 1 ? "day" : "days"}
+          </span>
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        {Array.from({ length: 7 }, (_, i) => (
+          <span
+            key={i}
+            className="flex h-6 w-6 items-center justify-center rounded-full border border-border"
+          >
+            {i < daysElapsed ? (
+              <Check className="h-3 w-3 text-success" />
+            ) : (
+              <X className="h-3 w-3 text-foreground-muted" />
+            )}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
@@ -111,13 +147,7 @@ export function SummaryGoals({ goalId }: { goalId: string }) {
             : "left to reach the weekly goal"
         }
       />
-      <SummaryCard
-        icon={Flame}
-        iconClassName={p && p.streak > 0 ? "text-warning" : "text-foreground-muted"}
-        label="Current Streak"
-        value={`${p?.streak ?? 0} ${(p?.streak ?? 0) === 1 ? "day" : "days"}`}
-        secondaryText="consecutive days within the goal"
-      />
+      <DaysElapsedCard createdAt={goal.createdAt} />
     </div>
   );
 }
