@@ -1,6 +1,6 @@
 {
   "name": "apm-syn-backend",
-  "version": "0.1.0",
+  "version": "0.10.0",
   "private": true,
   "description": "APM SYN Backend — Express + TypeScript + Zod 4 + pino",
   "engines": {

@@ -1,32 +1,108 @@
-# React + TypeScript + Vite
+# APM SYN — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Aplicação React para o projeto APM SYN (Assets Portfolio Manager Synchronization).
 
-Currently, two official plugins are available:
+## 📋 Visão Geral
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+O frontend é a interface do usuário do APM SYN, construída com React e Vite, oferecendo uma experiência responsiva com design system baseado em Tailwind CSS e TanStack Query para gerenciamento de estado server-side.
 
-## React Compiler
+## 🛠️ Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Framework:** React 19 + React Router DOM 7
+- **Build:** Vite
+- **Estilização:** Tailwind CSS 4
+- **Estado cliente:** Zustand
+- **Query server:** TanStack Query (React Query)
+- **Validação:** Zod 4
+- **Auth:** Clerk (Clerk React)
+- **Componentes UI:** Radix UI + Lucide React
+- **Gráficos:** Recharts
+- **Data:** date-fns, es-toolkit
+- **Lint:** Oxlint
+- **TypeScript:** 6.x
 
-## Expanding the Oxlint configuration
+## ⚡ Requisitos
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+- Node.js `>=24.18.0`
+- npm `11.x`
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+## 🚀 Início Rápido
+
+```bash
+# Instalar dependências
+npm install
+
+# Copiar variáveis de ambiente
+cp .env.example .env
+
+# Rodar em desenvolvimento
+npm run dev          # http://localhost:5173
+
+# Build
+npm run build        # tsc -b && vite build
+
+# Preview da build
+npm run preview
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## 📜 Scripts
+
+| Script | Descrição |
+|---|---|
+| `npm run dev` | Servidor de desenvolvimento Vite com HMR |
+| `npm run build` | Compila TypeScript e build do Vite |
+| `npm run preview` | Preview da build de produção |
+| `npm run lint` | Executa Oxlint |
+| `npm run typecheck` | Validação de tipos TypeScript |
+
+## 📡 Integração com Backend
+
+O frontend se comunica com a API via variável de ambiente `VITE_API_URL`:
+
+```env
+VITE_API_URL=http://localhost:3000/api/v1
+```
+
+## 📁 Estrutura de Arquivos
+
+```
+frontend/
+├── src/               # Código fonte
+├── public/            # Assets estáticos
+├── docs/              # Documentação interna
+├── dist/              # Build compilado
+├── index.html
+├── .env.example
+├── .oxlintrc.json
+├── tsconfig.app.json
+├── tsconfig.json
+├── tsconfig.node.json
+├── vite.config.ts
+└── package.json
+```
+
+## 🔧 Variáveis de Ambiente
+
+Crie um arquivo `.env` baseado em `.env.example`:
+
+```env
+VITE_API_URL=http://localhost:3000/api/v1
+VITE_CLERK_PUBLISHABLE_KEY=
+VITE_APP_ENV=development
+```
+
+## 🎨 Design System
+
+O frontend utiliza:
+- **Tailwind CSS 4** para estilização com tokens de design
+- **Radix UI** para componentes acessíveis prontos
+- **Lucide React** para ícones
+- **clsx + class-variance-authority** para composição de classes
+
+## 📚 Documentação
+
+Consulte a documentação do projeto na raiz em `docs/` para visão geral da arquitetura.
+
+## 📜 Licença
+
+MIT — ver `LICENSE` na raiz do projeto.
