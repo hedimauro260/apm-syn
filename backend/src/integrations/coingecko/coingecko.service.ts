@@ -4,17 +4,20 @@ import {
   searchAssetsSchema,
   assetDetailSchema,
   priceDetailSchema,
+  marketsSchema,
 } from "./coingecko.schemas.js";
 import {
   normalizeSearchResponse,
   normalizeAssetDetail,
   normalizePriceResponse,
+  normalizeMarketsResponse,
 } from "./coingecko.normalizer.js";
-import type { AssetMetadata, PriceSnapshot, ConversionResult, PriceMap } from "./coingecko.types.js";
+import type { AssetMetadata, PriceSnapshot, ConversionResult, PriceMap, TickerQuote } from "./coingecko.types.js";
 
 export type CoinGeckoRawSearchResponse = z.infer<typeof searchAssetsSchema>;
 export type CoinGeckoRawAssetResponse = z.infer<typeof assetDetailSchema>;
 export type CoinGeckoRawPriceResponse = z.infer<typeof priceDetailSchema>;
+export type CoinGeckoRawMarketsResponse = z.infer<typeof marketsSchema>;
 
 export async function searchAssets(query: string): Promise<AssetMetadata[]> {
   if (!query || query.trim() === "") {
@@ -136,4 +139,31 @@ export async function convertToUsd(
     priceUsd: price.priceUsd,
     usdValue: quantity * price.priceUsd,
   };
+}
+
+export async function getMarketTicker(externalIds: string[]): Promise<TickerQuote[]> {
+  const ids = Array.from(new Set(externalIds)).filter(id => id.trim().length > 0);
+  if (!ids.length) {
+    return [];
+  }
+
+  try {
+    const raw = await coinGeckoGet<CoinGeckoRawMarketsResponse>("/coins/markets", {
+      vs_currency: "usd",
+      ids: ids.join(","),
+      per_page: "250",
+      order: "market_cap_desc",
+      sparkline: "false",
+    });
+
+    const parsed = marketsSchema.parse(raw);
+    return normalizeMarketsResponse(parsed);
+  } catch (err) {
+    if (err instanceof CoinGeckoClientError) {
+      throw err;
+    }
+    throw new CoinGeckoClientError(
+      err instanceof Error ? err.message : "Invalid markets response from CoinGecko"
+    );
+  }
 }

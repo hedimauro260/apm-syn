@@ -1,7 +1,7 @@
 import { cache, TTL_MS } from "../../services/cache.service.js";
 import * as coingeckoService from "../../integrations/coingecko/coingecko.service.js";
 import { CoinGeckoClientError } from "../../integrations/coingecko/coingecko.client.js";
-import type { AssetMetadata, PriceSnapshot, ConversionResult, PriceMap } from "../../integrations/coingecko/coingecko.types.js";
+import type { AssetMetadata, PriceSnapshot, ConversionResult, PriceMap, TickerQuote } from "../../integrations/coingecko/coingecko.types.js";
 
 interface MarketDataError extends Error {
   code: string;
@@ -169,6 +169,46 @@ export async function getPrices(
   }
 
   return { data: cachedEntries };
+}
+
+export async function getTicker(
+  externalIds: string[]
+): Promise<{ data: TickerQuote[] }> {
+  const uniqueIds = Array.from(new Set(externalIds)).filter(id => id.trim().length > 0);
+
+  if (uniqueIds.length === 0) {
+    return { data: [] };
+  }
+
+  const cacheKey = `ticker:${uniqueIds.join(",").toLowerCase()}`;
+
+  const cached = cache.get<TickerQuote[]>(cacheKey);
+  if (cached) {
+    return { data: cached };
+  }
+
+  try {
+    const quotes = await coingeckoService.getMarketTicker(uniqueIds);
+    cache.set(cacheKey, quotes, TTL_MS.PRICE);
+    return { data: quotes };
+  } catch (err) {
+    if (err instanceof CoinGeckoClientError) {
+      if (err.statusCode === 429 || err.message.toLowerCase().includes("rate limit")) {
+        throw createMarketDataError("MARKET_DATA_RATE_LIMITED", "CoinGecko rate limit exceeded");
+      }
+      throw createMarketDataError("MARKET_DATA_UNAVAILABLE", err.message);
+    }
+    if (isZodError(err)) {
+      throw createMarketDataError(
+        "MARKET_DATA_INVALID_RESPONSE",
+        "Invalid ticker response from CoinGecko"
+      );
+    }
+    throw createMarketDataError(
+      "MARKET_DATA_UNAVAILABLE",
+      err instanceof Error ? err.message : "Unknown market data error"
+    );
+  }
 }
 
 export async function convertToUsd(

@@ -23,6 +23,17 @@ const priceResponseSchema = z.record(
   })
 );
 
+const marketsResponseSchema = z.array(
+  z.object({
+    id: z.string(),
+    symbol: z.string(),
+    name: z.string(),
+    current_price: z.number().nullable(),
+    price_change_percentage_24h: z.number().nullable(),
+  })
+);
+
 export const searchAssetsSchema = searchResponseSchema;
 export const assetDetailSchema = coinDetailSchema;
 export const priceDetailSchema = priceResponseSchema;
+export const marketsSchema = marketsResponseSchema;

@@ -1,14 +1,26 @@
-import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { useMarketTickerQuery } from "@/features/market-data/api/market-data-queries";
 
 interface CryptoData {
     id: string;
     name: string;
     symbol: string;
     current_price: number;
-    price_change_percentage_24h: number;
+    price_change_percentage_24h: number | null;
 }
+
+const TICKER_IDS = [
+    "bitcoin",
+    "litecoin",
+    "ethereum",
+    "tether",
+    "binancecoin",
+    "solana",
+    "ripple",
+    "dogecoin",
+    "cardano",
+];
 
 const defaultCryptos: CryptoData[] = [
     { id: "bitcoin", name: "Bitcoin", symbol: "btc", current_price: 94250, price_change_percentage_24h: 2.45 },
@@ -19,28 +31,17 @@ const defaultCryptos: CryptoData[] = [
 ];
 
 export function LiveCryptoPrices() {
-    const [cryptos, setCryptos] = useState<CryptoData[]>(defaultCryptos);
+    const { data } = useMarketTickerQuery(TICKER_IDS);
 
-    useEffect(() => {
-        const fetchPrices = async () => {
-            try {
-                const res = await fetch(
-                    "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=bitcoin,litecoin,ethereum,tether,binancecoin,solana,ripple,dogecoin,cardano&order=market_cap_desc&per_page=10&page=1&sparkline=false"
-                );
-                if (res.ok) {
-                    const data = await res.json();
-                    setCryptos(data);
-                }
-            } catch (error) {
-                console.error("Erro ao buscar preços de cripto:", error);
-            }
-        };
+    const liveCryptos: CryptoData[] = (data?.data ?? []).map(quote => ({
+        id: quote.externalId,
+        name: quote.name,
+        symbol: quote.symbol,
+        current_price: quote.currentPrice,
+        price_change_percentage_24h: quote.changePercentage24h,
+    }));
 
-        fetchPrices();
-        const interval = setInterval(fetchPrices, 60000);
-        return () => clearInterval(interval);
-    }, []);
-
+    const cryptos = liveCryptos.length > 0 ? liveCryptos : defaultCryptos;
     const marqueeItems = [...cryptos, ...cryptos];
 
     return (
@@ -60,7 +61,9 @@ export function LiveCryptoPrices() {
                     <div className="absolute inset-y-0 right-0 w-12 bg-linear-to-l from-surface to-transparent z-10 pointer-events-none" />
                     <div className="absolute left-0 top-1/2 flex w-max -translate-y-1/2 gap-8 animate-marquee hover:[animation-play-state:paused]">
                         {marqueeItems.map((crypto, index) => {
-                            const isPositive = crypto.price_change_percentage_24h >= 0;
+                            const change = crypto.price_change_percentage_24h;
+                            const hasChange = typeof change === "number";
+                            const isPositive = hasChange && change >= 0;
                             return (
                                 <div
                                     key={`${crypto.id}-${index}`}
@@ -72,10 +75,14 @@ export function LiveCryptoPrices() {
                                     <span className="text-foreground-secondary">
                                         ${crypto.current_price.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                                     </span>
-                                    <span className={cn("flex items-center text-xs font-medium", isPositive ? "text-success" : "text-danger")}>
-                                        {isPositive ? <ArrowUpRight className="w-3 h-3 mr-0.5" /> : <ArrowDownRight className="w-3 h-3 mr-0.5" />}
-                                        {Math.abs(crypto.price_change_percentage_24h).toFixed(2)}%
-                                    </span>
+                                    {hasChange ? (
+                                        <span className={cn("flex items-center text-xs font-medium", isPositive ? "text-success" : "text-danger")}>
+                                            {isPositive ? <ArrowUpRight className="w-3 h-3 mr-0.5" /> : <ArrowDownRight className="w-3 h-3 mr-0.5" />}
+                                            {Math.abs(change).toFixed(2)}%
+                                        </span>
+                                    ) : (
+                                        <span className="text-foreground-secondary">--</span>
+                                    )}
                                 </div>
                             );
                         })}

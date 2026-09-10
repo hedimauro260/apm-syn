@@ -3,7 +3,11 @@ import { Link } from "react-router-dom";
 import { clsx } from "clsx";
 import { format } from "date-fns";
 import { SquareChevronRight, Sun, Moon, CloudDownload } from "lucide-react";
+import { useUser } from "@clerk/clerk-react";
 import { navigationSections } from "@/config/navigation";
+import { useWalletList } from "@/hooks/use-wallet-list";
+import { useWalletBalances } from "@/hooks/use-wallet-balances";
+import { formatUSD } from "@/lib/formats";
 
 interface HeaderMenuProps {
     onClose: () => void;
@@ -13,9 +17,18 @@ export function HeaderMenu({ onClose }: HeaderMenuProps) {
     const currentDate = format(new Date(), "MMM dd, yyyy");
     const allNavItems = navigationSections.flatMap((section) => section.items);
 
-    const userName = "John Doe";
-    const userInitials = "JD";
-    const userEmail = "john@example.com";
+    const { user } = useUser();
+    const { wallets, transactions } = useWalletList();
+    const { totalBalance } = useWalletBalances(wallets, transactions);
+
+    const userName = user?.fullName || user?.firstName || "User";
+    const userInitials = userName
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase() || "U";
+    const userEmail = user?.primaryEmailAddress?.emailAddress || "";
 
     const [isDark, setIsDark] = useState(() => {
         const saved = localStorage.getItem("theme");
@@ -65,7 +78,7 @@ export function HeaderMenu({ onClose }: HeaderMenuProps) {
                     </div>
                     <div className="flex flex-col mt-2">
                         <span className="text-sm text-foreground-muted">Total Balance</span>
-                        <span className="text-lg font-semibold text-primary">$15.000,00</span>
+                        <span className="text-lg font-semibold text-primary">{formatUSD(totalBalance)}</span>
                     </div>
                 </div>
             </div>

@@ -1,7 +1,11 @@
 import { Heart } from "lucide-react";
+import { clsx } from "clsx";
 
+interface AppFooterProps {
+    isLandingPage?: boolean;
+}
 
-export function AppFooter() {
+export function AppFooter({ isLandingPage = false }: AppFooterProps) {
     const currentYear = new Date().getFullYear();
 
     const footorItems = [
@@ -11,7 +15,7 @@ export function AppFooter() {
     ];
 
     return (
-        <footer className="space-y-2 px-6 py-6 border-t border-white">
+        <footer className={clsx("space-y-2 px-6 py-6 border-t border-border", isLandingPage ? "bg-background mt-auto" : "")}>
             <div className="flex flex-col md:flex-row items-center justify-between gap-3">
                 <p className="order-2 md:order-1 flex items-center text-[10px] text-foreground">
                     © {currentYear} - Made <Heart color="#ef4444" fill="#ef4444" className="h-4 w-4 mx-1" /> <span className="text-foreground font-medium"> by Kubo Labs</span>

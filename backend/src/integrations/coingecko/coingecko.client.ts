@@ -1,8 +1,6 @@
 import { env } from "../../config/env.js";
 import { logger } from "../../config/logger.js";
 
-const COINGECKO_BASE_URL = "https://api.coingecko.com/api/v3";
-
 function getApiKey(): string {
   const key = env.COINGECKO_API_KEY;
   if (!key) {
@@ -11,8 +9,22 @@ function getApiKey(): string {
   return key || "";
 }
 
-function buildUrl(endpoint: string, params: Record<string, string> = {}): string {
-  const url = new URL(`${COINGECKO_BASE_URL}${endpoint}`);
+function isDemoKey(key: string): boolean {
+  return key.startsWith("CG-");
+}
+
+function getBaseUrl(key: string): string {
+  return isDemoKey(key)
+    ? "https://api.coingecko.com/api/v3"
+    : "https://pro-api.coingecko.com/api/v3";
+}
+
+function getApiKeyHeader(key: string): string {
+  return isDemoKey(key) ? "x-cg-demo-api-key" : "x-cg-pro-api-key";
+}
+
+function buildUrl(key: string, endpoint: string, params: Record<string, string> = {}): string {
+  const url = new URL(`${getBaseUrl(key)}${endpoint}`);
   if (Object.keys(params).length > 0) {
     Object.entries(params).forEach(([key, value]) => url.searchParams.append(key, value));
   }
@@ -38,7 +50,8 @@ export async function coinGeckoGet<T>(
   options: { timeoutMs?: number; retries?: number; retryDelayMs?: number } = {}
 ): Promise<T> {
   const { timeoutMs = 10000, retries = 2, retryDelayMs = 1000 } = options;
-  const url = buildUrl(endpoint, params);
+  const key = getApiKey();
+  const url = buildUrl(key, endpoint, params);
   let lastError: Error | undefined;
 
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -51,7 +64,7 @@ export async function coinGeckoGet<T>(
         headers: {
           Accept: "application/json",
           "User-Agent": "apm-syn-backend",
-          "x-cg-pro-api-key": getApiKey(),
+          [getApiKeyHeader(key)]: key,
         },
       });
 

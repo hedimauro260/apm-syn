@@ -9,6 +9,7 @@ router.use(authenticateAndSync);
 router.use(marketDataLimiter);
 
 router.get("/assets/search", marketDataController.searchAssets);
+router.get("/assets/ticker", marketDataController.getTicker);
 router.get("/assets/:externalId", marketDataController.getAsset);
 router.get("/prices/:externalId", marketDataController.getPrice);
 router.get("/convert", marketDataController.convert);

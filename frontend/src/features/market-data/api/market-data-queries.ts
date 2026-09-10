@@ -27,3 +27,15 @@ export function useConvertQuery(assetId: string, quantity: number, enabled = tru
     staleTime: 30_000,
   });
 }
+
+export function useMarketTickerQuery(ids: string[], enabled = true) {
+  const { getToken } = useAuth();
+  return useQuery({
+    queryKey: ["market-data", "ticker", ids],
+    queryFn: () => getAuthToken(getToken).then(token => marketDataApi.getTicker(token, ids)),
+    enabled: enabled && ids.length > 0,
+    staleTime: 60_000,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
+  });
+}

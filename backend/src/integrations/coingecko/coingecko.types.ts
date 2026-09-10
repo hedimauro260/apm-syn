@@ -18,3 +18,11 @@ export type ConversionResult = {
 };
 
 export type PriceMap = Record<string, PriceSnapshot>;
+
+export type TickerQuote = {
+  externalId: string;
+  symbol: string;
+  name: string;
+  currentPrice: number;
+  changePercentage24h: number | null;
+};

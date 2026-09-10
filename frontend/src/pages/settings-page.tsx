@@ -1,100 +1,127 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ComponentType, type ReactNode } from "react";
-import { useAuth, useUser } from "@clerk/clerk-react";
-import { Bell, Check, ChevronRight, CircleAlert, CloudDownload, Code2, Database, Download, FileJson, Globe2, HardDrive, Import, Languages, Monitor, Moon, Paintbrush, RefreshCw, RotateCcw, Save, Server, ShieldCheck, Sun, Trash2, Upload, UserRound, WalletCards } from "lucide-react";
-import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Label, Select } from "@/components/ui";
+import { useState, useCallback } from "react";
 import { useToast } from "@/components/ui/toast";
-import { setTheme } from "@/lib/theme";
-import { apiClient } from "@/services/api/client";
-import type { PaginatedResponse } from "@/services/api/types";
+import { PageHeader } from "@/components/ui/page-header";
+import { Separator } from "@/components/ui/separator";
+import {
+  SettingsNav,
+  type SettingsSection,
+} from "./settings/settings-nav";
+import { GeneralSettings } from "./settings/sections/general-settings";
+import { FinancialSettings } from "./settings/sections/financial-settings";
+import { NotificationsSettings } from "./settings/sections/notifications-settings";
+import { AccountSettings } from "./settings/sections/account-settings";
+import { DataSettings } from "./settings/sections/data-settings";
+import { AdvancedSettings } from "./settings/sections/advanced-settings";
+import {
+  DEFAULT_SETTINGS,
+  type UserSettings,
+} from "@/features/settings/types/settings.types";
 
-type SectionId = "general" | "financial" | "notifications" | "account" | "data" | "advanced";
-type Appearance = "light" | "dark" | "system";
-type Language = "en" | "pt-BR";
-type Region = "en-US" | "pt-BR" | "en-GB";
-type Currency = "USD" | "EUR" | "BRL" | "GBP";
-type NumberFormat = "standard" | "compact";
-type PriceInterval = "1" | "5" | "15" | "30" | "manual";
-type MarketVariation = "24h" | "7d" | "30d";
-type ExportFormat = "json" | "csv";
-type ExportScope = "preferences" | "full-account" | "transactions" | "wallets" | "websites" | "goals" | "debug-information";
-type MarketStatus = "connected" | "refreshing";
-type CacheStatus = "ready" | "cleared";
+const STORAGE_KEY = "apm-syn-settings";
 
-type Preferences = {
-  appearance: Appearance;
-  language: Language;
-  region: Region;
-  currency: Currency;
-  numberFormat: NumberFormat;
-  priceInterval: PriceInterval;
-  autoRefresh: boolean;
-  showMarketPrice: boolean;
-  marketVariation: MarketVariation;
-  productUpdates: boolean;
-  priceAlerts: boolean;
-  weeklyReport: boolean;
-  goalReminders: boolean;
-};
+function loadSettings(): UserSettings {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return DEFAULT_SETTINGS;
+    return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
+  } catch {
+    return DEFAULT_SETTINGS;
+  }
+}
 
-type Section = {
-  id: SectionId;
-  label: string;
-  description: string;
-  icon: ComponentType<{ className?: string }>;
-};
+function saveSettings(settings: UserSettings) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+}
 
-type AppearanceOption = {
-  value: Appearance;
-  label: string;
-  icon: ComponentType<{ className?: string }>;
-};
+type NestedRecord = Record<string, unknown>;
 
-type ExportCollection = PaginatedResponse<unknown>;
+function setNestedValue(obj: UserSettings, path: string, value: unknown): UserSettings {
+  const keys = path.split(".");
+  const result: NestedRecord = { ...(obj as unknown as NestedRecord) };
+  let current = result;
 
-type ExportPayload = {
-  schemaVersion: string;
-  exportedAt: string;
-  scope: ExportScope;
-  profile: {
-    id: string | null;
-    name: string | null;
-    email: string | null;
-  };
-  preferences: Preferences;
-  data: Record<string, unknown>;
-};
+  for (let i = 0; i < keys.length - 1; i++) {
+    const key = keys[i]!;
+    const child = current[key];
+    current[key] = {
+      ...(child !== null && typeof child === "object" && !Array.isArray(child)
+        ? (child as NestedRecord)
+        : {}),
+    };
+    current = current[key] as NestedRecord;
+  }
 
-const PREFERENCES_KEY = "apm-syn.preferences";
-const MARKET_UPDATE_KEY = "apm-syn.market-data.updated-at";
-const SCHEMA_VERSION = "1.0.0";
-const APPLICATION_VERSION = "1.0.0";
-const API_VERSION = "v1";
-const MARKET_PROVIDER = "CoinGecko";
+  current[keys[keys.length - 1]!] = value;
+  return result as unknown as UserSettings;
+}
 
-const APPEARANCE_VALUES = ["light", "dark", "system"] as const;
-const LANGUAGE_VALUES = ["en", "pt-BR"] as const;
-const REGION_VALUES = ["en-US", "pt-BR", "en-GB"] as const;
-const CURRENCY_VALUES = ["USD", "EUR", "BRL", "GBP"] as const;
-const NUMBER_FORMAT_VALUES = ["standard", "compact"] as const;
-const PRICE_INTERVAL_VALUES = ["1", "5", "15", "30", "manual"] as const;
-const MARKET_VARIATION_VALUES = ["24h", "7d", "30d"] as const;
+export function SettingsPage() {
+  const [activeSection, setActiveSection] = useState<SettingsSection>("general");
+  const [settings, setSettings] = useState<UserSettings>(loadSettings);
+  const { toast } = useToast();
 
-const defaults: Preferences = {
-  appearance: "system",
-  language: "en",
-  region: "en-US",
-  currency: "USD",
-  numberFormat: "standard",
-  priceInterval: "5",
-  autoRefresh: true,
-  showMarketPrice: true,
-  marketVariation: "24h",
-  productUpdates: true,
-  priceAlerts: true,
-  weeklyReport: false,
-  goalReminders: true,
-};
+  const handleUpdate = useCallback((path: string, value: unknown) => {
+    setSettings((prev) => {
+      const next = setNestedValue(prev, path, value);
+      saveSettings(next);
+      return next;
+    });
+  }, []);
 
-const sections: Section[] = [
-  { id: "general", label: "General", description: "Appearance and regional options", icon: Paintbrush },
-];
+  const handleClearCache = useCallback(() => {
+    try {
+      const keysToKeep = ["apm-syn-settings", "theme"];
+      const keys = Object.keys(localStorage);
+      for (const key of keys) {
+        if (!keysToKeep.includes(key)) {
+          localStorage.removeItem(key);
+        }
+      }
+      toast.success("Cache cleared", "Local cache has been cleared successfully.");
+    } catch {
+      toast.error("Failed to clear cache", "An error occurred while clearing the cache.");
+    }
+  }, [toast]);
+
+  return (
+    <div className="p-4">
+      <PageHeader
+        title="Settings"
+        subtitle="Customize your APM SYN experience."
+      />
+
+      <div className="flex flex-col lg:flex-row gap-6">
+        <aside className="lg:w-56 shrink-0">
+          <SettingsNav active={activeSection} onChange={setActiveSection} />
+        </aside>
+
+        <Separator orientation="vertical" className="hidden lg:block h-auto" />
+
+        <main className="flex-1 min-w-0 max-w-3xl">
+          {activeSection === "general" && (
+            <GeneralSettings settings={settings} onUpdate={handleUpdate} />
+          )}
+          {activeSection === "financial" && (
+            <FinancialSettings
+              settings={settings}
+              onUpdate={handleUpdate}
+              onRefreshPrices={() =>
+                toast.info("Refreshing prices", "Market data will update shortly.")
+              }
+            />
+          )}
+          {activeSection === "notifications" && (
+            <NotificationsSettings settings={settings} onUpdate={handleUpdate} />
+          )}
+          {activeSection === "account" && <AccountSettings />}
+          {activeSection === "data" && (
+            <DataSettings onClearCache={handleClearCache} />
+          )}
+          {activeSection === "advanced" && (
+            <AdvancedSettings onClearCache={handleClearCache} />
+          )}
+        </main>
+      </div>
+    </div>
+  );
+}

@@ -44,6 +44,26 @@ export async function getAsset(
   }
 }
 
+export async function getTicker(
+  req: Request<unknown, unknown, unknown, Record<string, unknown>>,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const rawIds = req.query.ids;
+    if (!rawIds || typeof rawIds !== "string" || rawIds.trim() === "") {
+      throw new AppError(400, "BAD_REQUEST", "Query parameter 'ids' is required");
+    }
+
+    const ids = rawIds.split(",").map(id => id.trim()).filter(Boolean);
+
+    const result = await marketDataService.getTicker(ids);
+    res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function getPrice(
   req: Request<ExternalIdParams>,
   res: Response,
