@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
-  CalendarCheck,
-  WalletMinimal,
   LogOut,
   Sun,
   Moon,
@@ -16,6 +14,8 @@ import {
   TooltipContent,
   TooltipPortal,
 } from "@/components/ui/custom-tooltip";
+import { DepositCalendar } from "@/components/ui/deposit-calendar";
+import { WalletSummaryPopover } from "@/components/ui/wallet-summary-popover";
 import { cn } from "@/lib/utils";
 import { useClerk } from "@clerk/clerk-react";
 
@@ -44,11 +44,6 @@ export function AppSidebar() {
 
   const allNavItems = navigationSections.flatMap((section) => section.items);
 
-  const topIcons = [
-    { icon: CalendarCheck, label: "Calendar" },
-    { icon: WalletMinimal, label: "Wallets" },
-  ];
-
   return (
     <TooltipProvider delayDuration={200}>
       <LucideProvider strokeWidth={1} className="w-4.5 h-4.5">
@@ -56,21 +51,8 @@ export function AppSidebar() {
           <div className="flex flex-col h-full items-center">
             {/* TOP: Ícones fixos */}
             <div className="flex flex-col items-center space-y-4 pb-4 border-b border-border/50">
-              {topIcons.map(({ icon: Icon, label }) => (
-                <TooltipRoot key={label}>
-                  <TooltipTrigger asChild>
-                    <button className="p-0 rounded-lg hover:bg-foreground/5 transition-colors">
-                      <Icon className="text-foreground-muted hover:text-foreground transition-colors" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipPortal>
-                    <TooltipContent side="right" className="flex items-center gap-1">
-                      <span>{label}</span>
-                      <span className="text-foreground-muted/50 text-[10px]">⌘</span>
-                    </TooltipContent>
-                  </TooltipPortal>
-                </TooltipRoot>
-              ))}
+              <DepositCalendar variant="icon" />
+              <WalletSummaryPopover />
             </div>
 
             {/* CENTER: Navegação com tooltips */}

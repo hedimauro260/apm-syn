@@ -29,7 +29,11 @@ function toLocalDate(iso: string): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0, 0);
 }
 
-export function DepositCalendar() {
+interface DepositCalendarProps {
+  variant?: "card" | "icon";
+}
+
+export function DepositCalendar({ variant = "card" }: DepositCalendarProps) {
   const [hovered, setHovered] = useState(false);
   const [month, setMonth] = useState(() => startOfMonth(new Date()));
   const closeRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -90,7 +94,15 @@ export function DepositCalendar() {
       onMouseEnter={open}
       onMouseLeave={scheduleClose}
     >
-      {hovered ? (
+      {variant === "icon" ? (
+        <button
+          type="button"
+          aria-label="Calendar"
+          className="p-0 rounded-lg hover:bg-foreground/5 transition-colors"
+        >
+          <Calendar className="text-foreground-muted hover:text-foreground transition-colors" />
+        </button>
+      ) : hovered ? (
         <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-1.5">
           <button
             type="button"
@@ -126,7 +138,32 @@ export function DepositCalendar() {
       )}
 
       {hovered && (
-        <div className="absolute right-0 top-full z-50 mt-3 w-64 rounded-xl border border-border bg-surface shadow-lg p-3">
+        <div
+          className={`absolute top-full z-50 mt-3 w-64 rounded-xl border border-border bg-surface shadow-lg p-3 ${
+            variant === "icon" ? "left-0" : "right-0"
+          }`}
+        >
+          {variant === "icon" && (
+            <div className="flex items-center justify-between mb-2">
+              <button
+                type="button"
+                onClick={() => setMonth(m => subMonths(m, 1))}
+                className="flex h-5 w-5 items-center justify-center rounded hover:bg-border-subtle transition-colors"
+              >
+                <ChevronLeft className="h-3 w-3 text-foreground-muted" />
+              </button>
+              <span className="text-xs font-medium text-foreground tabular-nums">
+                {monthLabel}
+              </span>
+              <button
+                type="button"
+                onClick={() => setMonth(m => addMonths(m, 1))}
+                className="flex h-5 w-5 items-center justify-center rounded hover:bg-border-subtle transition-colors"
+              >
+                <ChevronRight className="h-3 w-3 text-foreground-muted" />
+              </button>
+            </div>
+          )}
           <div className="grid grid-cols-7 gap-0.5 text-center">
             {WEEK_LABELS.map(w => (
               <span key={w} className="text-[9px] font-medium text-foreground-muted py-1">
