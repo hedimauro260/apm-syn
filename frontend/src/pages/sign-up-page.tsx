@@ -1,14 +1,10 @@
-import { SignUp } from "@clerk/clerk-react";
-
-import { AuthPageShell } from "@/components/auth/auth-page-shell";
-import { useClerkAppearance } from "@/components/auth/clerk-appearance";
+import { AuthPageLayout } from "@/components/auth/auth-page-layout";
+import { SignUpForm } from "@/components/auth/sign-up-form";
 
 export function SignUpPage() {
-  const appearance = useClerkAppearance();
-
   return (
-    <AuthPageShell>
-      <SignUp appearance={appearance} />
-    </AuthPageShell>
+    <AuthPageLayout>
+      <SignUpForm />
+    </AuthPageLayout>
   );
 }
