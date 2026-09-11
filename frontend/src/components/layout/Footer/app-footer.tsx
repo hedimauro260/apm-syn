@@ -9,9 +9,9 @@ export function AppFooter({ isLandingPage = false }: AppFooterProps) {
     const currentYear = new Date().getFullYear();
 
     const footorItems = [
-        { label: "About", to: "/about" },
-        { label: "Terms", to: "/terms" },
-        { label: "Support", to: "/support" },
+        { label: "About", to: "/app/about" },
+        { label: "Terms", to: "/app/terms" },
+        { label: "Support", to: "/app/support" },
     ];
 
     return (

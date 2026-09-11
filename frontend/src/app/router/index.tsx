@@ -8,6 +8,9 @@ import { NotFoundPage } from "@/pages/not-found-page";
 import { PortfolioPage } from "@/pages/portfolio-page";
 import { SettingsPage } from "@/pages/settings-page";
 import { ActivitiesPage } from "@/pages/activities-page";
+import { SupportPage } from "@/pages/support-page";
+import { TermsPage } from "@/pages/terms-page";
+import { AboutPage } from "@/pages/about-page";
 import { UiPlaygroundPage } from "@/pages/ui-playground-page";
 import { WalletsPage } from "@/pages/wallets-page";
 import { WebsitesPage } from "@/pages/websites-page";
@@ -80,6 +83,18 @@ export const router = createBrowserRouter([
       {
         path: "settings",
         element: <SettingsPage />,
+      },
+      {
+        path: "about",
+        element: <AboutPage />,
+      },
+      {
+        path: "support",
+        element: <SupportPage />,
+      },
+      {
+        path: "terms",
+        element: <TermsPage />,
       },
       {
         path: "ui",

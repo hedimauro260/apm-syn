@@ -9,7 +9,7 @@ import { UserAvatar } from "@/components/ui/user-avatar";
 const profileMenuItems = [
     { label: "Profile", icon: User, href: "/app/settings?tab=account" },
     { label: "Settings", icon: Settings, href: "/app/settings" },
-    { label: "About", icon: Info, href: "#about" },
+    { label: "About", icon: Info, href: "/app/about" },
     { label: "Logout", icon: LogOut, action: "logout", danger: true },
 ];
 
