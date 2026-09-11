@@ -3,6 +3,13 @@ import { z } from "zod";
 export const updateMeSchema = z
   .object({
     name: z.string().trim().min(1, "Name is required").max(100).optional(),
+    onboarding: z
+      .object({
+        completed: z.boolean().optional(),
+        skipped: z.boolean().optional(),
+      })
+      .strict()
+      .optional(),
   })
   .strip();
 

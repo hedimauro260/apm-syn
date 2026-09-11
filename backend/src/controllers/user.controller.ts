@@ -42,8 +42,8 @@ export async function patchMe(
       throw new AppError(401, "UNAUTHORIZED", "Authentication required");
     }
 
-    const { name } = req.body;
-    const user = await userService.updateMe(clerkId, { name });
+    const { name, onboarding } = req.body;
+    const user = await userService.updateMe(clerkId, { name, onboarding });
     res.status(200).json({ data: userService.toUserResponse(user) });
   } catch (err) {
     next(err);

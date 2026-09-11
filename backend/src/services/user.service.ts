@@ -43,7 +43,13 @@ export async function getMe(clerkId: string): Promise<IUser> {
   return user;
 }
 
-export async function updateMe(clerkId: string, data: { name?: string }): Promise<IUser> {
+export async function updateMe(
+  clerkId: string,
+  data: {
+    name?: string;
+    onboarding?: { completed?: boolean; skipped?: boolean };
+  }
+): Promise<IUser> {
   const user = await userRepository.findByClerkId(clerkId);
   if (!user) {
     throw new AppError(404, "USER_NOT_FOUND", "User not found");
@@ -73,6 +79,10 @@ export function toUserResponse(user: IUser): {
   email: string | null;
   name: string | null;
   imageUrl: string | null;
+  onboarding: {
+    completed: boolean;
+    skipped: boolean;
+  };
   createdAt: string;
   updatedAt: string;
 } {
@@ -82,6 +92,10 @@ export function toUserResponse(user: IUser): {
     email: user.email ?? null,
     name: user.name ?? null,
     imageUrl: user.imageUrl ?? null,
+    onboarding: {
+      completed: user.onboarding?.completed ?? false,
+      skipped: user.onboarding?.skipped ?? false,
+    },
     createdAt: user.createdAt.toISOString(),
     updatedAt: user.updatedAt.toISOString(),
   };

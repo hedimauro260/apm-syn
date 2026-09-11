@@ -18,11 +18,35 @@ export async function createUser(data: {
   return user.save();
 }
 
+export type UpdateUserData = {
+  name?: string;
+  onboarding?: {
+    completed?: boolean;
+    skipped?: boolean;
+  };
+};
+
 export async function updateByClerkId(
   clerkId: string,
-  data: { name?: string }
+  data: UpdateUserData
 ): Promise<IUser | null> {
-  return UserModel.findOneAndUpdate({ clerkId }, { $set: data }, { new: true }).exec();
+  const $set: Record<string, unknown> = {};
+
+  if (data.name !== undefined) {
+    $set.name = data.name;
+  }
+  if (data.onboarding?.completed !== undefined) {
+    $set["onboarding.completed"] = data.onboarding.completed;
+  }
+  if (data.onboarding?.skipped !== undefined) {
+    $set["onboarding.skipped"] = data.onboarding.skipped;
+  }
+
+  if (Object.keys($set).length === 0) {
+    return UserModel.findOne({ clerkId }).exec();
+  }
+
+  return UserModel.findOneAndUpdate({ clerkId }, { $set }, { new: true }).exec();
 }
 
 export async function deleteByClerkId(clerkId: string): Promise<{ deletedCount: number }> {
