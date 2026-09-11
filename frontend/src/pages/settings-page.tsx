@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useToast } from "@/components/ui/toast";
 import { PageHeader } from "@/components/ui/page-header";
 import { Separator } from "@/components/ui/separator";
@@ -13,24 +14,23 @@ import { AccountSettings } from "./settings/sections/account-settings";
 import { DataSettings } from "./settings/sections/data-settings";
 import { AdvancedSettings } from "./settings/sections/advanced-settings";
 import {
-  DEFAULT_SETTINGS,
-  type UserSettings,
-} from "@/features/settings/types/settings.types";
+  loadSettings,
+  saveSettings,
+  notifySettingsChanged,
+} from "@/features/settings/storage";
+import type { UserSettings } from "@/features/settings/types/settings.types";
 
-const STORAGE_KEY = "apm-syn-settings";
+const VALID_SECTIONS: SettingsSection[] = [
+  "general",
+  "financial",
+  "notifications",
+  "account",
+  "data",
+  "advanced",
+];
 
-function loadSettings(): UserSettings {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return DEFAULT_SETTINGS;
-    return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
-  } catch {
-    return DEFAULT_SETTINGS;
-  }
-}
-
-function saveSettings(settings: UserSettings) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+function isSection(value: string | null): value is SettingsSection {
+  return value !== null && (VALID_SECTIONS as string[]).includes(value);
 }
 
 type NestedRecord = Record<string, unknown>;
@@ -56,14 +56,25 @@ function setNestedValue(obj: UserSettings, path: string, value: unknown): UserSe
 }
 
 export function SettingsPage() {
-  const [activeSection, setActiveSection] = useState<SettingsSection>("general");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get("tab");
+
+  const activeSection: SettingsSection = isSection(tabParam) ? tabParam : "general";
   const [settings, setSettings] = useState<UserSettings>(loadSettings);
   const { toast } = useToast();
+
+  const handleSectionChange = useCallback(
+    (section: SettingsSection) => {
+      setSearchParams(section === "general" ? {} : { tab: section }, { replace: true });
+    },
+    [setSearchParams]
+  );
 
   const handleUpdate = useCallback((path: string, value: unknown) => {
     setSettings((prev) => {
       const next = setNestedValue(prev, path, value);
       saveSettings(next);
+      notifySettingsChanged();
       return next;
     });
   }, []);
@@ -92,7 +103,7 @@ export function SettingsPage() {
 
       <div className="flex flex-col lg:flex-row gap-6">
         <aside className="lg:w-56 shrink-0">
-          <SettingsNav active={activeSection} onChange={setActiveSection} />
+          <SettingsNav active={activeSection} onChange={handleSectionChange} />
         </aside>
 
         <Separator orientation="vertical" className="hidden lg:block h-auto" />
@@ -113,7 +124,9 @@ export function SettingsPage() {
           {activeSection === "notifications" && (
             <NotificationsSettings settings={settings} onUpdate={handleUpdate} />
           )}
-          {activeSection === "account" && <AccountSettings />}
+          {activeSection === "account" && (
+            <AccountSettings settings={settings} onUpdate={handleUpdate} />
+          )}
           {activeSection === "data" && (
             <DataSettings onClearCache={handleClearCache} />
           )}

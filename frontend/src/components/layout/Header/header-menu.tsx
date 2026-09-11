@@ -8,6 +8,7 @@ import { navigationSections } from "@/config/navigation";
 import { useWalletList } from "@/hooks/use-wallet-list";
 import { useWalletBalances } from "@/hooks/use-wallet-balances";
 import { formatUSD } from "@/lib/formats";
+import { UserAvatar } from "@/components/ui/user-avatar";
 
 interface HeaderMenuProps {
     onClose: () => void;
@@ -22,12 +23,6 @@ export function HeaderMenu({ onClose }: HeaderMenuProps) {
     const { totalBalance } = useWalletBalances(wallets, transactions);
 
     const userName = user?.fullName || user?.firstName || "User";
-    const userInitials = userName
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .slice(0, 2)
-        .toUpperCase() || "U";
     const userEmail = user?.primaryEmailAddress?.emailAddress || "";
 
     const [isDark, setIsDark] = useState(() => {
@@ -51,9 +46,7 @@ export function HeaderMenu({ onClose }: HeaderMenuProps) {
             <div className="flex flex-col px-4 py-6 border-b border-border">
                 <div className="flex items-center justify-between mb-4">
                     <div className="flex flex-col gap-3">
-                        <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-semibold">
-                            {userInitials}
-                        </div>
+                        <UserAvatar size="md" />
                         <div className="flex flex-col">
                             <span className="text-lg font-medium text-foreground">
                                 {userName}

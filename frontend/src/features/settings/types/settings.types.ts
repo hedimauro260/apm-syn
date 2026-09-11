@@ -5,6 +5,16 @@ export type NumberFormat = "dot-comma" | "comma-dot" | "space-comma";
 export type DateFormat = "MM/DD/YYYY" | "DD/MM/YYYY" | "YYYY-MM-DD";
 export type MarketRefreshInterval = "1" | "5" | "15" | "30" | "manual";
 export type PriceChangePeriod = "24h" | "7d" | "30d";
+export type AvatarId =
+  | "initials"
+  | "rocket"
+  | "planet"
+  | "sparkles"
+  | "zap"
+  | "shield"
+  | "crown"
+  | "moon"
+  | "flame";
 
 export interface UserSettings {
   general: {
@@ -29,6 +39,9 @@ export interface UserSettings {
     goalReminders: boolean;
     weeklyReport: boolean;
     systemNotifications: boolean;
+  };
+  account: {
+    avatar: AvatarId;
   };
 }
 
@@ -55,6 +68,9 @@ export const DEFAULT_SETTINGS: UserSettings = {
     goalReminders: true,
     weeklyReport: false,
     systemNotifications: true,
+  },
+  account: {
+    avatar: "initials",
   },
 };
 
