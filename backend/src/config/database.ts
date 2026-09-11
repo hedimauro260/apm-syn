@@ -28,6 +28,17 @@ export function isConnected(): boolean {
   return mongoose.connection.readyState === 1;
 }
 
+let mongoConnectionPromise: Promise<typeof mongoose> | null = null;
+
+export function getMongoConnection(): Promise<typeof mongoose> {
+  if (mongoConnectionPromise) return mongoConnectionPromise;
+  mongoConnectionPromise = connectDatabase().catch(err => {
+    mongoConnectionPromise = null;
+    throw err;
+  });
+  return mongoConnectionPromise;
+}
+
 export async function connectDatabase(): Promise<typeof mongoose> {
   mongoose.set("strictQuery", true);
 

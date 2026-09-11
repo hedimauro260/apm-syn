@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -36,7 +36,7 @@ export function EditWalletModal({ open, wallet, onClose }: EditWalletModalProps)
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     setValue,
     reset,
     formState: { errors },
@@ -58,10 +58,10 @@ export function EditWalletModal({ open, wallet, onClose }: EditWalletModalProps)
     }
   }, [wallet, open, reset]);
 
-  const watchedType = watch("type");
-  const watchedColor = watch("color");
-  const watchedName = watch("name");
-  const watchedDescription = watch("description");
+  const watchedType = useWatch({ control, name: "type" });
+  const watchedColor = useWatch({ control, name: "color" });
+  const watchedName = useWatch({ control, name: "name" });
+  const watchedDescription = useWatch({ control, name: "description" });
 
   const handleClose = () => {
     setServerError(null);

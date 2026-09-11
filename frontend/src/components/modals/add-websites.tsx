@@ -1,4 +1,4 @@
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { z } from "zod";
@@ -33,7 +33,7 @@ export function AddWebsiteModal({ open, onClose }: AddWebsiteModalProps) {
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     setValue,
     reset,
     formState: { errors, isValid },
@@ -48,11 +48,11 @@ export function AddWebsiteModal({ open, onClose }: AddWebsiteModalProps) {
     defaultValues: { name: "", url: "", description: "", color: "", initialBalance: "" },
   });
 
-  const watchedName = watch("name");
-  const watchedUrl = watch("url");
-  const watchedColor = watch("color");
-  const watchedDescription = watch("description");
-  const watchedInitialBalance = watch("initialBalance");
+  const watchedName = useWatch({ control, name: "name" });
+  const watchedUrl = useWatch({ control, name: "url" });
+  const watchedColor = useWatch({ control, name: "color" });
+  const watchedDescription = useWatch({ control, name: "description" });
+  const watchedInitialBalance = useWatch({ control, name: "initialBalance" });
 
   const handleClose = () => {
     reset();

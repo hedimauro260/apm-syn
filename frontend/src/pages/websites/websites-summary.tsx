@@ -4,12 +4,17 @@ import { startOfWeek, isWithinInterval, parseISO, startOfDay } from "date-fns";
 import { BarChart, Bar, Cell, XAxis, YAxis, ReferenceLine, ResponsiveContainer } from "recharts";
 import { useWebsitesQuery } from "@/features/websites/api/website-queries";
 import { useTransactionsQuery } from "@/features/transactions/api/transaction-queries";
+import type { Website } from "@/features/websites/types/website.types";
+import type { Transaction } from "@/features/transactions/types/transaction.types";
 import { LoadingState } from "@/components/ui/loading-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { Button } from "@/components/ui/button";
 import { formatUSD } from "@/lib/formats";
 
 const BAR_COLORS = ["#1e40af", "#2563eb", "#3b82f6", "#60a5fa", "#93c5fd", "#bfdbfe"];
+
+const EMPTY_WEBSITES: Website[] = [];
+const EMPTY_TRANSACTIONS: Transaction[] = [];
 
 interface SummaryCardProps {
   icon: React.ElementType;
@@ -77,8 +82,8 @@ export function WebsitesSummary() {
   const websitesQuery = useWebsitesQuery({ limit: 100 });
   const transactionsQuery = useTransactionsQuery({ limit: 100, sort: "-date" });
 
-  const websites = websitesQuery.data?.data ?? [];
-  const transactions = transactionsQuery.data?.data ?? [];
+  const websites = websitesQuery.data?.data ?? EMPTY_WEBSITES;
+  const transactions = transactionsQuery.data?.data ?? EMPTY_TRANSACTIONS;
 
   const isLoading = websitesQuery.isLoading || transactionsQuery.isLoading;
   const isError = websitesQuery.isError || transactionsQuery.isError;

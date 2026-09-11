@@ -16,6 +16,7 @@ import portfolioRoutes from "./modules/portfolio/portfolio.routes.js";
 import goalRoutes from "./routes/goal.routes.js";
 import accountRoutes from "./modules/account/account.routes.js";
 import { requestIdMiddleware } from "./middlewares/request-id.js";
+import { connectDatabaseMiddleware } from "./middlewares/connect-database.middleware.js";
 import { globalLimiter } from "./middlewares/rate-limit.js";
 import { notFoundMiddleware } from "./middlewares/not-found.middleware.js";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
@@ -53,6 +54,7 @@ export function createApp(): express.Express {
   );
 
   app.use(globalLimiter);
+  app.use(connectDatabaseMiddleware);
 
   app.use(routes);
   app.use("/api/v1/users", userRoutes);

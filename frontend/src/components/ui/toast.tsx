@@ -1,7 +1,5 @@
 import {
-    createContext,
     useCallback,
-    useContext,
     useEffect,
     useMemo,
     useRef,
@@ -11,6 +9,7 @@ import {
 import { createPortal } from "react-dom";
 import { CheckCircle, TriangleAlert, CircleAlert, Info, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ToastContext, type ToastApi } from "./use-toast";
 
 export type ToastType = "success" | "error" | "warning" | "info";
 
@@ -55,20 +54,6 @@ const barMap: Record<ToastType, string> = {
 interface ToastState extends ToastData {
     leaving: boolean;
 }
-
-interface ToastContextValue {
-    toast: ToastApi;
-    dismiss: (id: string) => void;
-}
-
-interface ToastApi {
-    success: (title: string, message?: string, duration?: number) => string;
-    error: (title: string, message?: string, duration?: number) => string;
-    warning: (title: string, message?: string, duration?: number) => string;
-    info: (title: string, message?: string, duration?: number) => string;
-}
-
-const ToastContext = createContext<ToastContextValue | null>(null);
 
 let idCounter = 0;
 const nextId = () => `toast-${Date.now()}-${idCounter++}`;
@@ -199,12 +184,4 @@ export function ToastProvider({ children }: PropsWithChildren) {
             <ToastViewport toasts={toasts} onDismiss={dismiss} />
         </ToastContext.Provider>
     );
-}
-
-export function useToast(): ToastContextValue {
-    const ctx = useContext(ToastContext);
-    if (!ctx) {
-        throw new Error("useToast must be used within a <ToastProvider>");
-    }
-    return ctx;
 }

@@ -6,11 +6,12 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useToast } from "@/components/ui/toast";
+import { useToast } from "@/components/ui/use-toast";
 import { TrendingDown, TrendingUp, ChevronLeft, ChevronRight } from "lucide-react";
 import { useWalletList } from "@/hooks/use-wallet-list";
 import { useWalletBalances } from "@/hooks/use-wallet-balances";
 import { useWebsitesQuery } from "@/features/websites/api/website-queries";
+import type { Website } from "@/features/websites/types/website.types";
 import { formatUSD } from "@/lib/formats";
 import { getWalletAssets } from "@/lib/wallet-utils";
 import { AssetCombobox } from "@/features/wallet-operations/components/asset-combobox";
@@ -36,6 +37,8 @@ const STEP_LABELS: Record<WizardStep, string> = {
   2: "Asset & amount",
   3: "Details & confirm",
 };
+
+const EMPTY_WEBSITES: Website[] = [];
 
 // Earning são registradas em USD; usamos um ativo sintético para o contrato do backend.
 const USD_ASSET: AssetInput = { externalId: "usd", symbol: "USD", name: "US Dollar" };
@@ -65,7 +68,7 @@ export function WebsiteTransactionsModal({ open, onClose, initialTab = "earnings
 
   const { wallets, transactions } = useWalletList();
   const websitesQuery = useWebsitesQuery({ limit: 100 });
-  const websites = websitesQuery.data?.data ?? [];
+  const websites = websitesQuery.data?.data ?? EMPTY_WEBSITES;
 
   const { rows: balanceRows } = useWalletBalances(wallets, transactions);
 

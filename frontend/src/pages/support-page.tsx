@@ -61,7 +61,7 @@ export function SupportPage() {
             possible.
           </p>
           <div className="mt-3">
-            <Badge variant="secondary">support@example.com</Badge>
+            <Badge variant="default">support@example.com</Badge>
           </div>
         </Card>
       </div>

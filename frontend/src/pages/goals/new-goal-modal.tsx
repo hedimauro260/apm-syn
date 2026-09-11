@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { addDays, format, parseISO, startOfWeek } from "date-fns";
@@ -51,7 +51,7 @@ export function NewGoalModal({ open, onClose, onCreated }: NewGoalModalProps) {
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     setValue,
     reset,
     formState: { errors },
@@ -67,10 +67,10 @@ export function NewGoalModal({ open, onClose, onCreated }: NewGoalModalProps) {
     },
   });
 
-  const watchedStartDate = watch("startDate");
-  const watchedType = watch("distributionType");
-  const watchedGoal = watch("totalWeeklyGoal");
-  const watchedWalletIds = watch("walletIds");
+  const watchedStartDate = useWatch({ control, name: "startDate" });
+  const watchedType = useWatch({ control, name: "distributionType" });
+  const watchedGoal = useWatch({ control, name: "totalWeeklyGoal" });
+  const watchedWalletIds = useWatch({ control, name: "walletIds" });
 
   const selectedWallets = useMemo(
     () => wallets.filter(w => watchedWalletIds.includes(w.id)),

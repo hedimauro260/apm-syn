@@ -3,6 +3,7 @@ import { Globe, Ellipsis } from "lucide-react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { useWebsitesQuery } from "@/features/websites/api/website-queries";
 import { useTransactionsQuery } from "@/features/transactions/api/transaction-queries";
+import type { Transaction } from "@/features/transactions/types/transaction.types";
 import { LoadingState } from "@/components/ui/loading-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -22,6 +23,8 @@ const FALLBACK_COLORS = [
   "#14b8a6",
   "#f97316",
 ];
+
+const EMPTY_TRANSACTIONS: Transaction[] = [];
 
 function normalizeColor(color: string | undefined, index: number): string {
   if (color && /^#([0-9A-Fa-f]{3}){1,2}$/.test(color.trim())) {
@@ -223,7 +226,7 @@ function InflowsOutflowsList({
 
 function AnalysisByPeriod() {
   const transactionsQuery = useTransactionsQuery({ limit: 200, sort: "-date" });
-  const transactions = transactionsQuery.data?.data ?? [];
+  const transactions = transactionsQuery.data?.data ?? EMPTY_TRANSACTIONS;
 
   const periods = useMemo(() => {
     const now = new Date();

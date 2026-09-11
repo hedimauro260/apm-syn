@@ -1,4 +1,4 @@
-import type { ElementType } from "react";
+import { useState, type ElementType } from "react";
 import { Target, TrendingUp, Hourglass, Flame, Check, X } from "lucide-react";
 import { useGoals } from "./use-goals";
 import { LoadingState } from "@/components/ui/loading-state";
@@ -41,7 +41,8 @@ function SummaryCard({
 
 function DaysElapsedCard({ createdAt }: { createdAt: string }) {
   const msPerDay = 1000 * 60 * 60 * 24;
-  const diffMs = Date.now() - new Date(createdAt).getTime();
+  const [now] = useState(() => Date.now());
+  const diffMs = now - new Date(createdAt).getTime();
   const daysElapsed = Math.min(7, Math.max(1, Math.ceil(diffMs / msPerDay)));
 
   return (

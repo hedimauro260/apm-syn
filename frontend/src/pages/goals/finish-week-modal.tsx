@@ -6,7 +6,7 @@ import { ErrorState } from "@/components/ui/error-state";
 import { useGoalQuery, useGoalProgressQuery, useArchiveGoalMutation } from "@/features/goals/api/goal-queries";
 import { formatUSD, formatPercentage } from "@/lib/formats";
 import { ApiError } from "@/services/api/errors";
-import { useToast } from "@/components/ui/toast";
+import { useToast } from "@/components/ui/use-toast";
 import { useState } from "react";
 
 interface FinishWeekModalProps {

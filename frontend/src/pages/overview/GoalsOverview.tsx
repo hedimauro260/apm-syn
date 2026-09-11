@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { ArrowUpRight, Target, TrendingUp, Flame, CalendarRange, WalletMinimal, Check, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO } from "date-fns";
@@ -33,7 +33,8 @@ function GoalCard({ goal }: GoalCardProps) {
   const statusMeta = goalStatusMeta(p?.status ?? "not_started");
 
   const msPerDay = 1000 * 60 * 60 * 24;
-  const daysElapsed = Math.min(7, Math.max(1, Math.ceil((Date.now() - new Date(goal.createdAt).getTime()) / msPerDay)));
+  const [now] = useState(() => Date.now());
+  const daysElapsed = Math.min(7, Math.max(1, Math.ceil((now - new Date(goal.createdAt).getTime()) / msPerDay)));
 
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-border bg-surface-elevated p-4">

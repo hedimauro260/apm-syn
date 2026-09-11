@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/toast";
+import { useToast } from "@/components/ui/use-toast";
 import { useUserQuery, useUpdateUserMutation } from "@/features/user/api/user-queries";
 import { useWalletsQuery } from "@/features/wallets/api/wallet-queries";
 import { useWebsitesQuery } from "@/features/websites/api/website-queries";
