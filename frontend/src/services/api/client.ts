@@ -12,7 +12,7 @@ export async function apiClient<T>(
 ): Promise<T> {
   const { token, headers, ...init } = options;
 
-  const response = await fetch(`${env.apiUrl}${path}`, {
+  const response = await fetch(`${env.apiUrl}/api/v1${path}`, {
     ...init,
     headers: {
       "Content-Type": "application/json",
