@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Helmet } from "react-helmet-async";
 import {
   OverviewKPIs,
   PortfolioOverview,
@@ -20,6 +21,13 @@ export function OverviewPage() {
 
   return (
     <div className="flex flex-col gap-4 p-4">
+      <Helmet>
+        <title>Overview | APM Syn</title>
+        <meta
+          name="description"
+          content="Overview of your portfolio, wallets, websites and goals at a glance."
+        />
+      </Helmet>
       <OverviewPageHeader />
 
       <SetupOnboarding

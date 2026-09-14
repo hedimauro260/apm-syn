@@ -1,3 +1,5 @@
+import { Helmet } from "react-helmet-async";
+
 import { PortfolioHeader } from "./portfolio/portfolio-header";
 import { PortfolioSummary } from "./portfolio/portfolio-summary";
 import { AnalysisParticipation } from "./portfolio/analysis-participation";
@@ -8,6 +10,13 @@ import { ConsolidatedHoldings } from "./portfolio/consolidated-holdings";
 export function PortfolioPage() {
   return (
     <>
+      <Helmet>
+        <title>Portfolio | APM Syn</title>
+        <meta
+          name="description"
+          content="Consolidated portfolio view with crypto prices and asset distribution."
+        />
+      </Helmet>
       <div className="flex flex-col lg:flex-row gap-4 p-4">
         <div className="flex-1">
           <PortfolioHeader />

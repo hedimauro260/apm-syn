@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
 import { clsx } from "clsx";
 import { Button } from "@/components/ui/button";
@@ -457,6 +458,13 @@ function HeroDashboard() {
 export function HomePage() {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans selection:bg-primary/20">
+      <Helmet>
+        <title>Home | APM Syn</title>
+        <meta
+          name="description"
+          content="Track earnings, wallets and withdrawal goals from every microtask site in a single dashboard."
+        />
+      </Helmet>
       <AppHeader isLandingPage={true} />
 
       <main className="flex-1 flex flex-col pt-16">

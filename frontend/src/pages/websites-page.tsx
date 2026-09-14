@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Helmet } from "react-helmet-async";
 import { WebsitesPageHeader } from "./websites/websites-page-header";
 import { WebsitesSummary } from "./websites/websites-summary";
 import { DailyEarnings } from "./websites/daily-earnings";
@@ -25,6 +26,13 @@ export function WebsitesPage() {
 
   return (
     <div>
+      <Helmet>
+        <title>Websites | APM Syn</title>
+        <meta
+          name="description"
+          content="Track earnings, withdrawals and balances from all your microtask websites."
+        />
+      </Helmet>
       <div className="flex flex-col lg:flex-row gap-4 p-4">
         <div className="flex-1">
           <WebsitesPageHeader

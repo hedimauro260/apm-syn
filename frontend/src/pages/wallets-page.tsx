@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Helmet } from "react-helmet-async";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -23,6 +24,13 @@ export function WalletsPage() {
   const [archiveWallet, setArchiveWallet] = useState<Wallet | null>(null);
   return (
     <div>
+      <Helmet>
+        <title>Wallets | APM Syn</title>
+        <meta
+          name="description"
+          content="Manage and track all your wallets and cryptocurrency balances."
+        />
+      </Helmet>
       {/* Header, Summary, Analytics, All Wallets List*/}
       <div className="flex flex-col lg:flex-row gap-4 p-4">
         <div className="flex-1">

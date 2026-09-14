@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +21,13 @@ import { setTheme } from "@/lib/theme";
 export function UiPlaygroundPage() {
   return (
     <main className="min-h-screen bg-background text-foreground">
+      <Helmet>
+        <title>UI Playground | APM Syn</title>
+        <meta
+          name="description"
+          content="Design system component playground for APM Syn."
+        />
+      </Helmet>
       <div className="max-w-5xl mx-auto py-8 px-4 sm:px-6 space-y-10">
         {/* Header */}
         <div className="space-y-4">

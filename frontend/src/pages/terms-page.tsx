@@ -1,9 +1,14 @@
+import { Helmet } from "react-helmet-async";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card } from "@/components/ui/card";
 
 export function TermsPage() {
   return (
     <div className="p-4">
+      <Helmet>
+        <title>Terms of Service | APM Syn</title>
+        <meta name="description" content="Terms of service for using APM Syn." />
+      </Helmet>
       <PageHeader
         title="Terms of Service"
         subtitle="Please read these terms carefully before using the service."

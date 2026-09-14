@@ -1,3 +1,4 @@
+import { Helmet } from "react-helmet-async";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -5,6 +6,13 @@ import { Badge } from "@/components/ui/badge";
 export function SupportPage() {
   return (
     <div className="p-4">
+      <Helmet>
+        <title>Support | APM Syn</title>
+        <meta
+          name="description"
+          content="Find answers to common questions about APM Syn."
+        />
+      </Helmet>
       <PageHeader title="Support" subtitle="Find answers to common questions." />
 
       <div className="mt-4 max-w-3xl space-y-4">

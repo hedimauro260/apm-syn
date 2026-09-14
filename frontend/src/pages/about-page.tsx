@@ -1,9 +1,14 @@
+import { Helmet } from "react-helmet-async";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card } from "@/components/ui/card";
 
 export function AboutPage() {
   return (
     <div className="p-4">
+      <Helmet>
+        <title>About | APM Syn</title>
+        <meta name="description" content="Learn more about the APM Syn project." />
+      </Helmet>
       <PageHeader title="About" subtitle="Learn more about this project." />
 
       <div className="mt-4 max-w-3xl space-y-4">

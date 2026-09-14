@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { Helmet } from "react-helmet-async";
 import { GoalsPageHeader } from "./goals/goals-page-header";
 import { SummaryGoals } from "./goals/summary-goals";
 import { GoalsAnalysis } from "./goals/goals-analysis";
@@ -98,6 +99,13 @@ export function GoalsPage() {
 
   return (
     <div className="p-4">
+      <Helmet>
+        <title>Goals | APM Syn</title>
+        <meta
+          name="description"
+          content="Set weekly savings goals and track day-by-day progress."
+        />
+      </Helmet>
       <GoalsPageHeader
         onNewGoal={() => setNewGoalOpen(true)}
         onManageGoals={() => setListOpen(true)}

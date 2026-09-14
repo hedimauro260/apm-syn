@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { Helmet } from "react-helmet-async";
 import { useSearchParams } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { PageHeader } from "@/components/ui/page-header";
@@ -96,6 +97,13 @@ export function SettingsPage() {
 
   return (
     <div className="p-4">
+      <Helmet>
+        <title>Settings | APM Syn</title>
+        <meta
+          name="description"
+          content="Manage your account, preferences, notifications and data settings."
+        />
+      </Helmet>
       <PageHeader
         title="Settings"
         subtitle="Customize your APM SYN experience."

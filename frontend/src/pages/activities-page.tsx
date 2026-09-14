@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Helmet } from "react-helmet-async";
 import { ActivitiesPageHeader } from "./activities/activities-page-header";
 import { ActivitiesScopeTabs } from "./activities/activities-scope-tabs";
 import { ActivitiesSummary } from "./activities/activities-summary";
@@ -12,6 +13,13 @@ export function ActivitiesPage() {
 
   return (
     <div>
+      <Helmet>
+        <title>Activities | APM Syn</title>
+        <meta
+          name="description"
+          content="Daily activity history for your wallets, websites and transactions."
+        />
+      </Helmet>
       <div className="flex p-4 gap-4">
         <div className="flex flex-col gap-4">
           <div className="flex justify-between items-center">
