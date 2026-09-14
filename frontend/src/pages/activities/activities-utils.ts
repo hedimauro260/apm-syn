@@ -76,6 +76,28 @@ export function participantLabel(
   return websiteNames.get(participant.id ?? "") ?? "Website";
 }
 
+/**
+ * Retorna os rótulos dos participantes nomeados (WALLET/WEBSITE) de uma
+ * transação, omitindo participantes "External". Usado na coluna Partners:
+ * transações com "External" exibem apenas o nome da wallet/website real.
+ */
+export function transactionPartnerLabels(
+  tx: Transaction,
+  walletNames: Map<string, string>,
+  websiteNames: Map<string, string>,
+): string[] {
+  const labels: string[] = [];
+  for (const p of [tx.source, tx.destination]) {
+    if (p.type === "EXTERNAL") continue;
+    labels.push(
+      p.type === "WALLET"
+        ? walletNames.get(p.id ?? "") ?? "Wallet"
+        : websiteNames.get(p.id ?? "") ?? "Website",
+    );
+  }
+  return labels;
+}
+
 export function formatActivityDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-US", {
     month: "short",

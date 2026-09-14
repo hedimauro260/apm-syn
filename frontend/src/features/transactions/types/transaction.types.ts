@@ -54,3 +54,11 @@ export interface TransactionListParams {
   to?: string;
   countsTowardGoal?: boolean;
 }
+
+export interface UpdateTransactionInput {
+  quantity?: number;
+  usdValue?: number;
+  date?: string;
+  description?: string;
+  countsTowardGoal?: boolean;
+}

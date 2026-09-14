@@ -1,6 +1,10 @@
 import { apiClient } from "@/services/api/client";
 import type { ApiResponse, PaginatedResponse } from "@/services/api/types";
-import type { Transaction, TransactionListParams } from "@/features/transactions/types/transaction.types";
+import type {
+  Transaction,
+  TransactionListParams,
+  UpdateTransactionInput,
+} from "@/features/transactions/types/transaction.types";
 
 /**
  * Camada HTTP pura do domínio Transaction.
@@ -43,4 +47,23 @@ export async function getTransaction(token: string, transactionId: string): Prom
     token,
   });
   return response.data;
+}
+
+export async function updateTransaction(
+  token: string,
+  transactionId: string,
+  data: UpdateTransactionInput,
+): Promise<Transaction> {
+  const response = await apiClient<ApiResponse<Transaction>>(
+    `${TRANSACTION_BASE}/${transactionId}`,
+    { token, method: "PATCH", body: JSON.stringify(data) },
+  );
+  return response.data;
+}
+
+export async function deleteTransaction(token: string, transactionId: string): Promise<void> {
+  await apiClient<void>(`${TRANSACTION_BASE}/${transactionId}`, {
+    token,
+    method: "DELETE",
+  });
 }

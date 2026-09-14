@@ -8,6 +8,8 @@ import {
   Target,
   ChevronLeft,
   ChevronRight,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useActivities } from "./use-activities";
@@ -17,17 +19,21 @@ import {
   isTxInbound,
   isTxOutbound,
   participantLabel,
+  transactionPartnerLabels,
   type ActivitiesScope,
 } from "./activities-utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { SimpleTooltip } from "@/components/ui/simple-tooltip";
+import { IconButton } from "@/components/ui/icon-button";
 import { LoadingState } from "@/components/ui/loading-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatUSD } from "@/lib/formats";
 import { getCoinLogoUrl } from "@/features/assets/logo";
+import { EditTransactionModal } from "./edit-transaction-modal";
+import { DeleteTransactionModal } from "./delete-transaction-modal";
 import type { Transaction, TransactionType } from "@/features/transactions/types/transaction.types";
 
 const ICON_SIZE = 14;
@@ -35,7 +41,7 @@ const ICON_STROKE = 1;
 const PAGE_SIZE = 15;
 
 const GRID_COLS_CLASS =
-  "grid-cols-[minmax(0,1.5fr)_minmax(0,1.2fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,1fr)]";
+  "grid-cols-[minmax(0,1.5fr)_minmax(0,1.2fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,0.6fr)]";
 
 function formatDateOnly(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-US", {
@@ -50,6 +56,16 @@ function formatTimeOnly(dateStr: string): string {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function formatQuantity(tx: Transaction): string {
+  if (tx.type === "WEBSITE_EARNING") {
+    return tx.quantity.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }
+  return tx.quantity.toLocaleString("en-US", { maximumFractionDigits: 8 });
 }
 
 function ActivityIcon({ tx, scope }: { tx: Transaction; scope: ActivitiesScope }) {
@@ -96,6 +112,8 @@ export function ActivitiesHistory({ scope }: { scope: ActivitiesScope }) {
   const [walletFilter, setWalletFilter] = useState("all");
   const [websiteFilter, setWebsiteFilter] = useState("all");
   const [page, setPage] = useState(1);
+  const [editingTx, setEditingTx] = useState<Transaction | null>(null);
+  const [deletingTx, setDeletingTx] = useState<Transaction | null>(null);
 
   const handleSearch = (value: string) => {
     setSearchInput(value);
@@ -275,6 +293,7 @@ export function ActivitiesHistory({ scope }: { scope: ActivitiesScope }) {
             <span>Asset</span>
             <span>Amount</span>
             <span className="text-right">Date</span>
+            <span className="text-right">Actions</span>
           </div>
 
           <ul className="flex flex-col divide-y divide-border-subtle">
@@ -288,6 +307,7 @@ export function ActivitiesHistory({ scope }: { scope: ActivitiesScope }) {
                   : outbound && !inbound
                     ? "text-danger"
                     : "text-foreground";
+              const partners = transactionPartnerLabels(tx, walletNames, websiteNames);
 
               return (
                 <li key={tx.id}>
@@ -312,9 +332,15 @@ export function ActivitiesHistory({ scope }: { scope: ActivitiesScope }) {
                     </div>
 
                     <div className="flex items-center gap-1.5 text-xs text-foreground-secondary min-w-0">
-                      <span className="truncate">{participantLabel(tx.source, walletNames, websiteNames)}</span>
-                      <ArrowLeftRight size={10} strokeWidth={1.5} className="text-foreground-muted shrink-0" />
-                      <span className="truncate">{participantLabel(tx.destination, walletNames, websiteNames)}</span>
+                      {partners.length > 1 ? (
+                        <>
+                          <span className="truncate">{partners[0]}</span>
+                          <ArrowLeftRight size={10} strokeWidth={1.5} className="text-foreground-muted shrink-0" />
+                          <span className="truncate">{partners[1]}</span>
+                        </>
+                      ) : (
+                        <span className="truncate">{partners[0]}</span>
+                      )}
                     </div>
 
                     <div className="flex items-center gap-2 min-w-0">
@@ -327,9 +353,8 @@ export function ActivitiesHistory({ scope }: { scope: ActivitiesScope }) {
                         }}
                       />
                       <div className="flex min-w-0">
-                        {/* <span className="truncate text-xs font-medium text-foreground">{tx.asset.symbol}</span> */}
                         <span className="tabular-nums text-xs font-medium text-foreground">
-                          {tx.quantity.toLocaleString()}
+                          {formatQuantity(tx)}
                         </span>
                       </div>
                     </div>
@@ -344,6 +369,30 @@ export function ActivitiesHistory({ scope }: { scope: ActivitiesScope }) {
                       <span className="text-[10px] text-foreground-muted tabular-nums text-right truncate">
                         {formatTimeOnly(tx.date)}
                       </span>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-1">
+                      <SimpleTooltip label="Edit transaction" side="top">
+                        <IconButton
+                          variant="ghost"
+                          size="sm"
+                          aria-label={`Edit ${ACTIVITY_TYPE_LABELS[tx.type]}`}
+                          onClick={() => setEditingTx(tx)}
+                        >
+                          <Pencil />
+                        </IconButton>
+                      </SimpleTooltip>
+                      <SimpleTooltip label="Delete transaction" side="top">
+                        <IconButton
+                          variant="ghost"
+                          size="sm"
+                          className="hover:text-danger"
+                          aria-label={`Delete ${ACTIVITY_TYPE_LABELS[tx.type]}`}
+                          onClick={() => setDeletingTx(tx)}
+                        >
+                          <Trash2 />
+                        </IconButton>
+                      </SimpleTooltip>
                     </div>
                   </div>
                 </li>
@@ -386,6 +435,21 @@ export function ActivitiesHistory({ scope }: { scope: ActivitiesScope }) {
           </div>
         </div>
       )}
+
+      <EditTransactionModal
+        open={!!editingTx}
+        tx={editingTx}
+        walletNames={walletNames}
+        websiteNames={websiteNames}
+        onClose={() => setEditingTx(null)}
+      />
+      <DeleteTransactionModal
+        open={!!deletingTx}
+        tx={deletingTx}
+        walletNames={walletNames}
+        websiteNames={websiteNames}
+        onClose={() => setDeletingTx(null)}
+      />
     </div>
   );
 }
